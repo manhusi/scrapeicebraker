@@ -110,4 +110,26 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   Lecke: az első batch-ben a Gemini üres meta-kommentárt írt ("Ez egy nagyon konkrét kapacitás") —
   prompt-szabály lett belőle (6-7.: ne kommentáld a megfigyelést, variáld a kezdést).
   ⚠️ NYITOTT: Bálintnak fel kell vennie a ~2 perces booking_lodge videót, mielőtt a kampány kimegy.
-- **Következő:** Fázis 6 — Review UI (draftok átnézése/szerkesztése/jóváhagyása), utána Fázis 7 export.
+- **Fázis 6 — KÉSZ: Kampányok + Review IA** (verifikálva: 7 oldal HTTP 200, éles jóváhagyás lead+message
+  APPROVED-ra, tsc 0 hiba, 0 log-hiba). Új domain: `Campaign` entitás + `Lead.campaignId` (migráció
+  `20260703190000_add_campaign` backfillel: 27 booking_lodge lead a „Szauna – Booking Lodge" kampányba).
+  A generálás mostantól KAMPÁNY-alapú (a kampány ajánlat-sablonját használja), a scrape/analyze globális.
+  IA: TopNav (Dashboard/Kampányok/Leadek/Kulcsszavak), kattintható PipelineStepper (→ /leads?status=X),
+  `/leads` szűrhető lista, `/leads/[id]` detail teljes úttal + szerkeszthető üzenet + jóváhagyás +
+  prev/next review-lépkedés, `/campaigns` + `/campaigns/[id]` (tagok, generálás, státusz, lead-hozzáadás).
+  Forrás-igazságok: `src/lib/pipeline.ts` (státusz-meta), services: campaigns.ts, reviewMessage.ts.
+- **Fázis 6.5 — KÉSZ: Vezetett UX** (verifikálva: hero + checklist + címkék renderelnek, tsc 0, log 0).
+  Elvek kőbe vésve: `docs/UX.md` (a rendszer vezet; egy képernyő egy akció; gép belseje rejtve;
+  checklist-folyamatok). Új: NextAction hub (`lib/services/nextAction.ts` + NextActionCard),
+  egyesített feldolgozás (`processLeads.ts` + `/api/process` — beolvasás+elemzés egy láncban),
+  kampány = 5 lépéses vezetett checklist (CampaignChecklist), beszédes státusz-címkék
+  („Átnézésre vár" nem „DRAFTED"). Törölve: ScrapeButton, AnalyzeButton, CampaignControls.
+- **Fázis 6.6 — KÉSZ: Kampány-központú IA** („egy kampány = egy igazság", Bálint döntése). Home =
+  kampánylista (kártyánként saját következő-lépés CTA: `campaignNextStep`), alatta Lead-raktár sáv
+  (`getPoolSummary` + PoolBar: feldolgozás, szegmensenkénti „kampányra vár", hibák). Dashboard
+  megszűnt, `/campaigns` → `/` redirect, TopNav: Kampányok · Lead-raktár · Kulcsszavak.
+  BUG-JAVÍTÁS: a review prev/next mostantól a lead kampányán BELÜL lépked (nem globálisan) — két
+  párhuzamos kampány nem keveredik. Törölve: nextAction.ts, NextActionCard.
+  (Verifikálva: 6 útvonal 200, kártya-CTA + raktár renderel, tsc 0, log 0.)
+- **Következő:** Fázis 7 — Instantly CSV export (kampányonként, az APPROVED üzenetekből; a checklist
+  5. lépése már mutatja a helyét).

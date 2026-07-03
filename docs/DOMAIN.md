@@ -23,6 +23,7 @@ igazítva (lásd a mapping táblát lent).
 - `sourceKeyword` — melyik kulcsszóra jött (kézzel megadva importkor, a CSV nem tartalmazza)
 - `status` — enum: IMPORTED, SCRAPED, SCRAPE_FAILED, ANALYZED, ANALYZE_FAILED, DRAFTED, APPROVED, EXPORTED
 - `importBatchId` — melyik importból jött
+- `campaignId` — melyik kampányba szervezve (N—1, opcionális). A generálás/review/export kampány-szintű.
 - `createdAt`, `updatedAt`
 - **Egyediség/dedupe:** `pageId` (elsődleges), fallback `email`. Batch-en átívelő duplikátum-védelem.
 - **Nincs személynév** a forrásban — az outreach a céget szólítja meg, nem kamuzunk keresztnevet.
@@ -39,6 +40,15 @@ a szegmens azt, MILYEN fájdalom/ajánlat illik rá. Egy helyen kezelve.
 - `status` — enum: PLANNED (tervezett keresés), IMPORTED (van hozzá lead), ARCHIVED
 - `createdAt`, `updatedAt`
 - Használat: előre felveheted a keresendő kulcsszavakat (PLANNED), majd import köti hozzá a batch-et.
+
+### Campaign — az outreach szervező-egysége (menedzselhető)
+Egy nevesített kampány EGY ajánlatra fókuszál, leadeket fog össze, és egy Instantly-exportot ad ki.
+A generálás/review/export kampány-szintű; a scrape/analyze ellenben globális, kampány-független.
+- `id`, `name` (pl. „Szauna – Booking Lodge")
+- `offerTemplateId` — melyik ajánlat-sablonnal megy (a szegmens ebből adódik). A generálás EZT használja.
+- `status` — enum: DRAFT (építés alatt), READY (átnézve, exportálható), EXPORTED, ARCHIVED
+- `notes`, `createdAt`, `updatedAt`
+- Tagság: `Lead.campaignId` (N—1). Egy lead egyszerre egy kampányban.
 
 ### ImportBatch — egy CSV-feltöltés
 - `id`, `fileName`, `rowCount`, `createdAt`

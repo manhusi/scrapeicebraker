@@ -35,6 +35,29 @@ enum KeywordStatus {
   ARCHIVED
 }
 
+enum CampaignStatus {
+  DRAFT // építés alatt
+  READY // átnézve, exportálható
+  EXPORTED
+  ARCHIVED
+}
+
+// Az outreach szervező-egysége: egy ajánlatra fókuszál, leadeket fog össze, egy exportot ad ki.
+model Campaign {
+  id     String         @id @default(cuid())
+  name   String
+  status CampaignStatus @default(DRAFT)
+  notes  String?
+
+  offerTemplateId String?
+  offerTemplate   OfferTemplate? @relation(fields: [offerTemplateId], references: [id], onDelete: SetNull)
+
+  leads Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Kulcsszó-gyűjtő: a Meta Ads keresési tengely. Kulcsszó ≠ szegmens (lásd docs/DOMAIN.md).
 model Keyword {
   id        String        @id @default(cuid())
@@ -87,6 +110,9 @@ model Lead {
 
   importBatchId String?
   importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   // Egy-élő enrichment/generálás (DOMAIN: felülírással)
   siteContent SiteContent?
@@ -148,7 +174,8 @@ model OfferTemplate {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  messages Message[]
+  messages  Message[]
+  campaigns Campaign[]
 }
 
 // A saját kontextusom (mivel foglalkozom, mi az ajánlatom) — generálási kontextus.

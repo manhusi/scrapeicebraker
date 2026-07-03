@@ -5,11 +5,11 @@ import {
   ICEBREAKER_SCHEMA,
   type IcebreakerOutput,
 } from "@/lib/gemini/prompts";
-import { BOOKING_BODY_OPENING } from "@/lib/setup/seed";
 
 export type GenerateResult =
   | { leadId: string; status: "drafted" }
   | { leadId: string; status: "skipped_cached" }
+  | { leadId: string; status: "skipped_no_campaign" }
   | { leadId: string; status: "skipped_no_template" }
   | { leadId: string; status: "skipped_no_email" }
   | { leadId: string; status: "failed"; reason: string };
@@ -17,6 +17,12 @@ export type GenerateResult =
 // A teljes email összerakása EGY helyen: Szia! + icebreaker + fix törzs (docs/ICEBREAKER.md).
 function assembleFinalMessage(icebreaker: string, body: string): string {
   return `Szia!\n\n${icebreaker.trim()}\n\n${body.trim()}`;
+}
+
+// A sablon-törzs első sora — az icebreakernek ehhez kell átvezetnie (prompts.bodyOpening).
+function templateOpening(body: string): string {
+  const firstLine = body.split("\n").find((l) => l.trim().length > 0) ?? "";
+  return firstLine.trim().slice(0, 160);
 }
 
 // Egy ANALYZED lead üzenet-draftja. Cache: meglévő Message → skip (kivéve force).
@@ -27,7 +33,11 @@ export async function generateMessageForLead(
 ): Promise<GenerateResult> {
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
-    include: { analysis: true, message: true },
+    include: {
+      analysis: true,
+      message: true,
+      campaign: { include: { offerTemplate: true } },
+    },
   });
 
   if (!lead || !lead.analysis) {
@@ -37,13 +47,9 @@ export async function generateMessageForLead(
   if (!lead.email) return { leadId, status: "skipped_no_email" };
   if (!opts.force && lead.message) return { leadId, status: "skipped_cached" };
 
-  // Aktív sablon a lead szegmenséhez. Ha nincs (pl. unclear), kihagyjuk — nem erőltetünk rossz ajánlatot.
-  const template = lead.analysis.segmentKey
-    ? await prisma.offerTemplate.findFirst({
-        where: { segmentKey: lead.analysis.segmentKey, active: true },
-        orderBy: { createdAt: "desc" },
-      })
-    : null;
+  // A generálás a KAMPÁNY ajánlatát használja (nem közvetlenül a szegmenst).
+  if (!lead.campaign) return { leadId, status: "skipped_no_campaign" };
+  const template = lead.campaign.offerTemplate;
   if (!template) return { leadId, status: "skipped_no_template" };
 
   // Hang-útmutató a MyProfile-ból (admin-szerkeszthető, egy forrás-igazság).
@@ -59,7 +65,7 @@ export async function generateMessageForLead(
     intro: lead.intro,
     summary: lead.analysis.summary,
     signals,
-    bodyOpening: BOOKING_BODY_OPENING,
+    bodyOpening: templateOpening(template.body),
     voiceOverride: voice?.content ?? null,
   });
 
@@ -133,12 +139,18 @@ async function runPool<T>(
   await Promise.all(runners);
 }
 
-// Az ANALYZED leadek draftolása, limitálva.
+// Az ANALYZED, kampányba szervezett leadek draftolása, limitálva.
+// Kampányra szűkíthető (campaignId) — a kampány-oldali generáláshoz.
 export async function generatePendingMessages(opts: {
   limit?: number;
+  campaignId?: string;
 }): Promise<BatchGenerateSummary> {
   const leads = await prisma.lead.findMany({
-    where: { status: "ANALYZED", email: { not: null } },
+    where: {
+      status: "ANALYZED",
+      email: { not: null },
+      campaignId: opts.campaignId ?? { not: null },
+    },
     select: { id: true },
     take: opts.limit ?? 20,
     orderBy: { createdAt: "asc" },

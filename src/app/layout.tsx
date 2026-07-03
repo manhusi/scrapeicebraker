@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import TopNav from "@/app/components/TopNav";
 
 export const metadata: Metadata = {
   title: "Outreach Automation",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           color: "#e6e8ec",
         }}
       >
+        <TopNav />
         {children}
       </body>
     </html>
