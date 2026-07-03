@@ -76,4 +76,7 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   Indítás: `docker compose up -d` majd `npm run dev`.
 - **Fázis 1 — KÉSZ** (verifikálva: 9 domain tábla + enumok létrejöttek, Lead oszlopok = CSV mapping).
   Migráció: `prisma/migrations/20260703145237_init/`. Segment/OfferTemplate/MyProfile üresek (seed később).
-- **Következő:** Fázis 2 — Lead import (CSV BE): feltöltő UI + parser + pageId-dedupe.
+- **Fázis 2 — KÉSZ** (verifikálva valós CSV-vel: 45 lead beszúrva, 4 hibás sor kihagyva, ismételt
+  import 0 új / 45 dedupe. Mapping DB-ből ellenőrizve). Kód: `src/lib/services/leadCsv.ts` (parser+mapping),
+  `leadImport.ts` (dedupe+insert), `/api/import`, `/import` UI, dashboard `/`.
+- **Következő:** Fázis 3 — Firecrawl dúsítás. ⚠️ Ehhez kell a `FIRECRAWL_API_KEY` a `.env`-be.
