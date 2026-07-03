@@ -32,9 +32,18 @@ igazítva (lásd a mapping táblát lent).
 `intro`→intro · `followers`→followers · `phone`→phone · `address`→address.
 A CSV ~400 további oszlopát (ads-snapshotok, képek) **eldobjuk** — nem kell.
 
+### Keyword — a kulcsszó-gyűjtő (Meta Ads keresési tengely)
+A kulcsszó ≠ szegmens. A kulcsszó azt mondja meg, HONNAN jön a lead (melyik Meta Ads keresés);
+a szegmens azt, MILYEN fájdalom/ajánlat illik rá. Egy helyen kezelve.
+- `id`, `term` (egyedi, pl. „szauna", „fogorvos"), `notes`
+- `status` — enum: PLANNED (tervezett keresés), IMPORTED (van hozzá lead), ARCHIVED
+- `createdAt`, `updatedAt`
+- Használat: előre felveheted a keresendő kulcsszavakat (PLANNED), majd import köti hozzá a batch-et.
+
 ### ImportBatch — egy CSV-feltöltés
-- `id`, `keyword`, `fileName`, `rowCount`, `createdAt`
-- Kényelmi csoportosítás: „mit importáltam és mikor".
+- `id`, `fileName`, `rowCount`, `createdAt`
+- `keywordId` — melyik Keyword-höz tartozik (N—1). A batch importkor ehhez kötődik.
+- Kényelmi csoportosítás: „mit importáltam, melyik kulcsszóra, mikor".
 
 ### SiteContent — Firecrawl scrape eredménye
 - `id`, `leadId`
@@ -52,10 +61,17 @@ A CSV ~400 további oszlopát (ads-snapshotok, képek) **eldobjuk** — nem kell
 - `model`, `createdAt`
 - Egy leadhez a legfrissebb analízis az érvényes.
 
-### Segment — zárt szegmens-katalógus
-A szegmensek fix listája; minden ajánlat-sablon ide köt. Új szegmens = explicit döntés + `DOMAIN.md` frissítés.
-- `key` (pl. `ad_management_landing`, `event_payment_software`), `name`, `description`
-- Kezdő szegmensek a build során véglegesednek; a felhasználó ajánlatai határozzák meg.
+### Segment — FÁJDALOM-alapú, bővíthető katalógus
+A szegmensek **fájdalom-archetípusok**, nem niche-ek — ezért egy új kulcsszó (fogorvos, ügyvéd…) nem
+töri el a rendszert, a leadek ugyanabba a fájdalomba esnek. Zárt a katalógus abban az értelemben, hogy
+a Gemini csak a meglévő szegmensekből választhat (nem talál ki újat) — de a katalógus admin-felületen
+BŐVÍTHETŐ (Fázis 8), a Gemini a DB aktuális listáját olvassa. Új szegmens = explicit döntés.
+- `key`, `name`, `description` (a fájdalom + kinek szól)
+- Kezdő 6 (fájdalom-archetípusok): `booking_lodge`, `custom_manufacturer`, `product_ecom`,
+  `service_wellness`, `event_program`, `unclear` (fail-closed háló).
+- **Proof-horgony (lásd memória: outreach-business-context):** két bizonyított ajánlat a mag —
+  foglalás+fizetés szoftver (kacatanya.hu) és hirdetés+konverziós landing (mobil faház). A szomszédos
+  szegmensek ezekre a case study-kra épülnek.
 
 ### OfferTemplate — ajánlat-sablon (az üzenet fő törzse)
 Szegmensenként több is lehet.

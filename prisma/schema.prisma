@@ -29,13 +29,33 @@ enum MessageStatus {
   EXPORTED
 }
 
+enum KeywordStatus {
+  PLANNED // tervezett keresés, még nincs lead
+  IMPORTED // van hozzá importált lead
+  ARCHIVED
+}
+
+// Kulcsszó-gyűjtő: a Meta Ads keresési tengely. Kulcsszó ≠ szegmens (lásd docs/DOMAIN.md).
+model Keyword {
+  id        String        @id @default(cuid())
+  term      String        @unique
+  notes     String?
+  status    KeywordStatus @default(PLANNED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  batches ImportBatch[]
+}
+
 // Egy CSV-feltöltés (page-scraper export).
 model ImportBatch {
   id        String   @id @default(cuid())
-  keyword   String? // melyik kulcsszóra jött (kézzel megadva importkor)
   fileName  String?
   rowCount  Int      @default(0)
   createdAt DateTime @default(now())
+
+  keywordId String?
+  keyword   Keyword? @relation(fields: [keywordId], references: [id], onDelete: SetNull)
 
   leads Lead[]
 }

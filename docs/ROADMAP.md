@@ -42,6 +42,11 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   (ugyanazt kétszer nem scrape-eljük), hibánál a lead SCRAPE_FAILED, nem vész el.
 - **Siker:** egy valós weboldal ténylegesen lescrape-elve, a tartalom a DB-ben, státusz SCRAPED.
 
+### Fázis 3.5 — Kulcsszó-gyűjtő (Keyword collector)
+- `Keyword` entitás + `/keywords` oldal: keresendő kulcsszavak egy helyen, státusszal, lead-számmal.
+  ImportBatch a Keyword-höz kötve. Az import upsertálja a kulcsszót. (Kulcsszó ≠ szegmens — lásd DOMAIN.)
+- **Siker:** felveszek egy kulcsszót, importkor hozzákötődik a batch, a `/keywords` mutatja a lead-számot.
+
 ### Fázis 4 — Gemini analízis + szegmentálás
 - SiteContent → { szegmens, mit csinálnak (összefoglaló), fájópontok/jelek }. Zárt szegmens-katalógus.
 - **Siker:** valós tartalomból helyes szegmens és értelmes összefoglaló, státusz ANALYZED.
@@ -65,6 +70,9 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
 - **Siker:** felületen szerkeszthető a saját kontextus és a sablonok, a generálás ezt használja.
 
 ## A múlt hibái, amiket NEM ismételünk meg
+- **Firecrawl blokkolt-tartalom (valós lecke, Fázis 3):** a `success:true` nem garancia — védett oldalak
+  captcha/„biztonsági ellenőrzés" oldalt adnak vissza. Detektálni kell (kulcsszó + min. hossz) és
+  `SCRAPE_FAILED`-re tenni. A `stealth` proxy nem segített és 5× kredit — NEM használjuk auto-retryre.
 - Nem scrape-elünk/generálunk kétszer ugyanarra (pénz) — cache + idempotencia.
 - Nem tippelünk API-válasz formátumot — a Firecrawl/Gemini bekötés előtt valós hívással verifikáljuk.
 - Nem SQLite-izmus a sémában — Supabase-kompatibilis Postgres marad.
@@ -79,4 +87,19 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
 - **Fázis 2 — KÉSZ** (verifikálva valós CSV-vel: 45 lead beszúrva, 4 hibás sor kihagyva, ismételt
   import 0 új / 45 dedupe. Mapping DB-ből ellenőrizve). Kód: `src/lib/services/leadCsv.ts` (parser+mapping),
   `leadImport.ts` (dedupe+insert), `/api/import`, `/import` UI, dashboard `/`.
-- **Következő:** Fázis 3 — Firecrawl dúsítás. ⚠️ Ehhez kell a `FIRECRAWL_API_KEY` a `.env`-be.
+- **Fázis 3 — KÉSZ** (verifikálva valós scrape-pel: 39 SCRAPED, 5 SCRAPE_FAILED /blokkolt/, 1 IMPORTED
+  /nincs weboldal/). Kód: `src/lib/firecrawl/client.ts` (blokkolt-detektálás, retry),
+  `src/lib/services/scrapeLead.ts` (cache, fail-closed, pool), `/api/scrape`, dashboard ScrapeButton.
+- **Fázis 3.5 — KÉSZ** (verifikálva: `Keyword` entitás, migráció backfillel /szauma→45 lead, 0 adatvesztés/,
+  `/keywords` oldal add+archivál, import upsertálja a kulcsszót, tsc 0 hiba). Kód:
+  `src/lib/services/keywords.ts`, `/api/keywords`, `/api/keywords/[id]`, `/keywords` UI.
+  Migráció kézzel írva + `migrate deploy` (a destruktív drop miatt non-interaktívan).
+- **Fázis 4 — KÉSZ** (verifikálva valós Gemini-hívással: 6 szegmens seedelve, 39/39 lead elemezve 0 hiba,
+  megoszlás booking_lodge 27 / custom_manufacturer 7 / product_ecom 4 / unclear 1; tsc 0 hiba).
+  Modell: `gemini-2.5-flash` (env `GEMINI_MODEL`), strukturált JSON responseSchema, header-auth, retry.
+  Kód: `src/lib/gemini/client.ts`, `src/lib/gemini/prompts.ts` (prompt-katalógus, dinamikus szegmensek),
+  `src/lib/segments/catalog.ts` (6 archetípus + idempotens seed), `src/lib/services/analyzeLead.ts`,
+  `/api/segments/seed`, `/api/analyze`, dashboard AnalyzeButton + szegmens-megoszlás.
+  Lecke: az `unclear` fail-closed valóban kiszűrte a cookie-fal mögötti (rossz scrape) tartalmat.
+- **Következő:** Fázis 5 — Icebreaker + ajánlat generálás. Először utánaolvasunk, hogyan kell jó
+  (természetes, nem robotos) icebreakert írni, majd prompt + ajánlat-sablon párosítás.

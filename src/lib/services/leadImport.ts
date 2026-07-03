@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { parseLeadCsv, type LeadInput } from "@/lib/services/leadCsv";
+import { upsertKeywordForImport } from "@/lib/services/keywords";
 
 export type ImportSummary = {
   batchId: string | null; // null, ha nem került be új lead (üres batch-et nem hozunk létre)
@@ -76,9 +77,11 @@ export async function importLeadsFromCsv(
   // Üres importnál nem hozunk létre batch-et (ne szemetelje a listát).
   let batchId: string | null = null;
   if (toInsert.length > 0) {
+    // A kulcsszót a gyűjtőbe upsertáljuk, és a batch-et ehhez kötjük.
+    const keywordId = keyword ? await upsertKeywordForImport(keyword) : null;
     const batch = await prisma.importBatch.create({
       data: {
-        keyword,
+        keywordId,
         fileName: opts.fileName?.trim() || null,
         rowCount: toInsert.length,
       },
