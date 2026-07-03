@@ -166,6 +166,7 @@ model Message {
   leadId String @unique
   lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
+  subject    String?
   icebreaker String? @db.Text
 
   offerTemplateId String?

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import ScrapeButton from "@/app/components/ScrapeButton";
 import AnalyzeButton from "@/app/components/AnalyzeButton";
+import GenerateButton from "@/app/components/GenerateButton";
 
 // Dashboard: DB-státusz + lead-szám + legutóbbi importok + minta leadek.
 // A pipeline további lépései (scrape, analízis, generálás) a következő fázisokban jönnek.
@@ -65,6 +66,7 @@ export default async function Home() {
     await getData();
   const pendingScrape = statusCounts["IMPORTED"] ?? 0;
   const pendingAnalyze = statusCounts["SCRAPED"] ?? 0;
+  const pendingGenerate = statusCounts["ANALYZED"] ?? 0;
   const hasSegments = Object.keys(segmentCounts).length > 0;
 
   return (
@@ -157,6 +159,7 @@ export default async function Home() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <ScrapeButton pending={pendingScrape} />
             <AnalyzeButton pending={pendingAnalyze} />
+            <GenerateButton pending={pendingGenerate} />
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

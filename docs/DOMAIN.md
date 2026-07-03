@@ -86,8 +86,10 @@ A generálás kontextusa; „csak jó, ha tudjuk". Kevés, de fontos sor.
 - Alternatíva: egyetlen szerkeszthető dokumentum + strukturált ajánlat-lista. A build-fázisban véglegesítjük.
 
 ### Message — a generált/kész üzenet
+Architektúra: az email a videóra kér igent; a Grand Slam a videóban (lásd `ICEBREAKER.md`).
 - `id`, `leadId`
-- `icebreaker` — a személyre szabott nyitómondat
+- `subject` — Gemini-generált tárgysor (rövid, konkrét, nem salesy)
+- `icebreaker` — a személyre szabott nyitó (megfigyelés + átvezetés)
 - `offerTemplateId` — melyik ajánlat-sablon lett választva
 - `finalMessage` — icebreaker + behelyettesített ajánlat-törzs (ez megy exportba)
 - `status` — DRAFT, APPROVED, EXPORTED

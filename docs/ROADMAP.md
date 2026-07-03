@@ -101,5 +101,13 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   `src/lib/segments/catalog.ts` (6 archetípus + idempotens seed), `src/lib/services/analyzeLead.ts`,
   `/api/segments/seed`, `/api/analyze`, dashboard AnalyzeButton + szegmens-megoszlás.
   Lecke: az `unclear` fail-closed valóban kiszűrte a cookie-fal mögötti (rossz scrape) tartalmat.
-- **Következő:** Fázis 5 — Icebreaker + ajánlat generálás. Először utánaolvasunk, hogyan kell jó
-  (természetes, nem robotos) icebreakert írni, majd prompt + ajánlat-sablon párosítás.
+- **Fázis 5 — KÉSZ** (verifikálva: 25 draft valós leadeken, 0 hiba, batch-audit tiszta — 9-féle kezdés,
+  0 tiltott minta). Architektúra: az email a videóra kér igent, a Grand Slam a videóban (ICEBREAKER.md).
+  Scope-döntés: CSAK booking_lodge első körben (27 lead), 1 videó. Kód: prompts.buildIcebreakerPrompt
+  (anti-AI szabályokkal), `src/lib/services/generateMessage.ts`, `src/lib/setup/seed.ts` (MyProfile +
+  booking_lodge sablon v1 + offer_mode=hybrid), `/api/setup/seed`, `/api/generate`, GenerateButton.
+  Message.subject migráció: `20260703180000_add_message_subject`.
+  Lecke: az első batch-ben a Gemini üres meta-kommentárt írt ("Ez egy nagyon konkrét kapacitás") —
+  prompt-szabály lett belőle (6-7.: ne kommentáld a megfigyelést, variáld a kezdést).
+  ⚠️ NYITOTT: Bálintnak fel kell vennie a ~2 perces booking_lodge videót, mielőtt a kampány kimegy.
+- **Következő:** Fázis 6 — Review UI (draftok átnézése/szerkesztése/jóváhagyása), utána Fázis 7 export.
