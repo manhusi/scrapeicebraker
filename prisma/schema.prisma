@@ -1,0 +1,12 @@
+// A séma forrás-igazsága. Változtatás CSAK migrációval (CONSTITUTION 1.).
+// Fázis 0: még nincs modell — a domain modellek a Fázis 1-ben kerülnek be (lásd docs/DOMAIN.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Standard Postgres, Supabase-kompatibilis (CONSTITUTION 2.).
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
