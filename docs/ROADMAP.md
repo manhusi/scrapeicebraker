@@ -71,4 +71,7 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
 - Nem robotos icebreaker — előbb kutatás, csak utána prompt.
 
 ## Jelenlegi állapot
-- **Most itt:** Fázis 0 előtt, governance jóváhagyásra vár.
+- **Fázis 0 — KÉSZ** (verifikálva: `/api/health` → `{status:ok, db:connected}`, `/` → 200, Postgres healthy).
+  Stack: Next.js 15.5 (TS, App Router), Prisma 6.19, Postgres 16 Dockerben. Prisma kliens: `src/lib/db.ts`.
+  Indítás: `docker compose up -d` majd `npm run dev`.
+- **Következő:** Fázis 1 — Prisma séma + migrációk a `docs/DOMAIN.md` modelljeiből.
