@@ -1,5 +1,5 @@
 // A séma forrás-igazsága. Változtatás CSAK migrációval (CONSTITUTION 1.).
-// Fázis 0: még nincs modell — a domain modellek a Fázis 1-ben kerülnek be (lásd docs/DOMAIN.md).
+// A modellek a docs/DOMAIN.md-ből származnak; mezők a valós Apify page-scraper CSV-hez igazítva.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +9,158 @@ datasource db {
   // Standard Postgres, Supabase-kompatibilis (CONSTITUTION 2.).
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// A pipeline állapotgépe (ROADMAP gerince). Bővítés csak explicit döntéssel (CONSTITUTION 3.).
+enum LeadStatus {
+  IMPORTED
+  SCRAPED
+  SCRAPE_FAILED
+  ANALYZED
+  ANALYZE_FAILED
+  DRAFTED
+  APPROVED
+  EXPORTED
+}
+
+enum MessageStatus {
+  DRAFT
+  APPROVED
+  EXPORTED
+}
+
+// Egy CSV-feltöltés (page-scraper export).
+model ImportBatch {
+  id        String   @id @default(cuid())
+  keyword   String? // melyik kulcsszóra jött (kézzel megadva importkor)
+  fileName  String?
+  rowCount  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  leads Lead[]
+}
+
+// A pipeline alanya: egy megkeresendő cég (FB oldal).
+model Lead {
+  id String @id @default(cuid())
+
+  // Azonosítás / megszólítás (CSV: title, pageName, pageId)
+  businessName String // CSV: title  → megszólítás
+  pageHandle   String? // CSV: pageName (slug)
+  pageId       String? @unique // CSV: pageId → elsődleges dedupe kulcs
+
+  // Kapcsolat + enrichment inputok
+  email      String? // CSV: email
+  websiteUrl String? // CSV: website (|| websites/0) → Firecrawl input
+  fbUrl      String? // CSV: facebookUrl
+
+  // Jelek a szegmentáláshoz / icebreakerhez
+  category  String? // CSV: category → szegmens-jel
+  intro     String? // CSV: intro (bio)
+  followers Int? // CSV: followers
+  phone     String? // CSV: phone
+  address   String? // CSV: address
+
+  sourceKeyword String? // kézzel megadva importkor
+
+  status LeadStatus @default(IMPORTED)
+
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  // Egy-élő enrichment/generálás (DOMAIN: felülírással)
+  siteContent SiteContent?
+  analysis    Analysis?
+  message     Message?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([email])
+}
+
+// Firecrawl scrape eredménye (leadenként egy-élő).
+model SiteContent {
+  id        String   @id @default(cuid())
+  leadId    String   @unique
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sourceUrl String // mit scrape-eltünk (cache-kulcs a lead szintjén)
+  markdown  String   @db.Text
+  meta      Json? // cím, leírás stb.
+  scrapedAt DateTime @default(now())
+}
+
+// Gemini megértés + szegmentálás (leadenként egy-élő).
+model Analysis {
+  id     String @id @default(cuid())
+  leadId String @unique
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  // A szegmens kulcsa; a Segment katalógusra hivatkozik (FK-t szándékosan NEM teszünk,
+  // amíg a katalógus üres — a logika validál a zárt listára, CONSTITUTION 3.).
+  segmentKey String?
+  summary    String? @db.Text // mivel foglalkoznak
+  signals    Json? // fájópontok / kapaszkodók az icebreakerhez
+  model      String? // melyik Gemini modell
+
+  createdAt DateTime @default(now())
+}
+
+// Zárt szegmens-katalógus. Új szegmens = explicit döntés + DOMAIN.md frissítés.
+// Fázis 1-ben ÜRES; a te ajánlataidból seedeljük (Fázis 4–5 előtt).
+model Segment {
+  key         String  @id // pl. ad_management_landing, event_payment_software
+  name        String
+  description String?
+
+  templates OfferTemplate[]
+}
+
+// Ajánlat-sablon (az üzenet fő törzse). Szegmensenként több is lehet.
+model OfferTemplate {
+  id         String   @id @default(cuid())
+  segmentKey String
+  segment    Segment  @relation(fields: [segmentKey], references: [key], onDelete: Cascade)
+  name       String
+  body       String   @db.Text // placeholderekkel: {{businessName}}, {{painPoint}} ...
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  messages Message[]
+}
+
+// A saját kontextusom (mivel foglalkozom, mi az ajánlatom) — generálási kontextus.
+model MyProfile {
+  id        String   @id @default(cuid())
+  key       String   @unique // pl. about_me, positioning, proof
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// A generált/kész üzenet (leadenként egy-élő).
+model Message {
+  id     String @id @default(cuid())
+  leadId String @unique
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  icebreaker String? @db.Text
+
+  offerTemplateId String?
+  offerTemplate   OfferTemplate? @relation(fields: [offerTemplateId], references: [id], onDelete: SetNull)
+
+  finalMessage String?       @db.Text // icebreaker + behelyettesített ajánlat-törzs → ez megy exportba
+  status       MessageStatus @default(DRAFT)
+  edited       Boolean       @default(false) // kézzel módosították-e jóváhagyáskor
+
+  generatedAt DateTime  @default(now())
+  approvedAt  DateTime?
+}
+
+// Globális kapcsolók. Kiemelt: offer_mode = "hybrid" | "auto" (alap: hybrid).
+model Setting {
+  key   String @id
+  value String // egyszerű érték vagy JSON-string
 }
