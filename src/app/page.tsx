@@ -127,7 +127,7 @@ export default async function Home() {
         n={3}
         title="Csoportosítás"
         isNext={next("group")}
-        isIdle={c.groups.length === 0}
+        isIdle={c.groups.length === 0 && c.disqualified === 0}
       >
         {c.groups.length === 0 ? (
           <span className="faint" style={{ fontSize: 13, marginLeft: 8 }}>
@@ -156,6 +156,17 @@ export default async function Home() {
               </div>
             ),
           )
+        )}
+        {c.disqualified > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <Link
+              href="/leads?status=DISQUALIFIED"
+              className="faint"
+              style={{ fontSize: 12, textDecoration: "none" }}
+            >
+              {c.disqualified} lead nem célpont (már online foglal) — megnézem
+            </Link>
+          </div>
         )}
       </Station>
 

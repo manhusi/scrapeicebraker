@@ -21,7 +21,10 @@ igazítva (lásd a mapping táblát lent).
 - `followers` — követők (CSV: `followers`) → méret-jel
 - `phone`, `address` — kontextus (CSV: `phone`, `address`)
 - `sourceKeyword` — melyik kulcsszóra jött (kézzel megadva importkor, a CSV nem tartalmazza)
-- `status` — enum: IMPORTED, SCRAPED, SCRAPE_FAILED, ANALYZED, ANALYZE_FAILED, DRAFTED, APPROVED, EXPORTED
+- `status` — enum: IMPORTED, SCRAPED, SCRAPE_FAILED, ANALYZED, ANALYZE_FAILED, **DISQUALIFIED**, DRAFTED, APPROVED, EXPORTED
+  - `DISQUALIFIED` (Fázis 9): elemezve, de NEM célpont — a foglalás-fájdalom szegmenseknél már
+    online foglal (`Analysis.bookingMode = "online"`), ezért nem kap üzenetet. Nem vész el, látható
+    a „Nem célpont" szűrőben, kézzel visszavehető. Lásd `docs/ICEBREAKER.md` (kvalifikáció).
 - `importBatchId` — melyik importból jött
 - `campaignId` — melyik kampányba szervezve (N—1, opcionális). A generálás/review/export kampány-szintű.
 - `createdAt`, `updatedAt`
@@ -68,6 +71,9 @@ A generálás/review/export kampány-szintű; a scrape/analyze ellenben globáli
 - `segmentKey` — a kiválasztott szegmens (lásd Segment)
 - `summary` — mivel foglalkoznak (rövid)
 - `signals` — fájópontok / kapaszkodók az icebreakerhez (JSON vagy szöveg)
+- `bookingMode` (Fázis 9) — a foglalás módja a jelekből: `manual` | `online` | `unknown`. Az `online`
+  a foglalás-fájdalom szegmenseknél (`booking_lodge`, `service_wellness`, `event_program`) kizáró ok.
+  Forrás-igazság a szegmens-halmazra: `lib/segments/catalog.ts` (`BOOKING_PAIN_SEGMENTS`).
 - `model`, `createdAt`
 - Egy leadhez a legfrissebb analízis az érvényes.
 

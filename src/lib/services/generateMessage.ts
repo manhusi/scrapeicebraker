@@ -19,6 +19,15 @@ function assembleFinalMessage(icebreaker: string, body: string): string {
   return `Szia!\n\n${icebreaker.trim()}\n\n${body.trim()}`;
 }
 
+// Védőháló a törzs-szivárgás ellen (ICEBREAKER.md 5.): ha a modell mégis beírta a törzs
+// nyitó fordulatát az icebreaker végére, levágjuk, hogy ne duplázódjon a végső üzenetben.
+function stripLeakedOpening(icebreaker: string, bodyOpening: string): string {
+  const sentinel = bodyOpening.split(":")[0].trim();
+  if (sentinel.length < 6) return icebreaker.trim();
+  const idx = icebreaker.indexOf(sentinel);
+  return (idx === -1 ? icebreaker : icebreaker.slice(0, idx)).trim();
+}
+
 // A sablon-törzs első sora — az icebreakernek ehhez kell átvezetnie (prompts.bodyOpening).
 function templateOpening(body: string): string {
   const firstLine = body.split("\n").find((l) => l.trim().length > 0) ?? "";
@@ -59,13 +68,14 @@ export async function generateMessageForLead(
     ? (lead.analysis.signals as string[])
     : [];
 
+  const bodyOpening = templateOpening(template.body);
   const prompt = buildIcebreakerPrompt({
     businessName: lead.businessName,
     category: lead.category,
     intro: lead.intro,
     summary: lead.analysis.summary,
     signals,
-    bodyOpening: templateOpening(template.body),
+    bodyOpening,
     voiceOverride: voice?.content ?? null,
   });
 
@@ -80,24 +90,22 @@ export async function generateMessageForLead(
     return { leadId, status: "failed", reason: result.error };
   }
 
-  const finalMessage = assembleFinalMessage(
-    result.data.icebreaker,
-    template.body,
-  );
+  const icebreaker = stripLeakedOpening(result.data.icebreaker, bodyOpening);
+  const finalMessage = assembleFinalMessage(icebreaker, template.body);
 
   await prisma.message.upsert({
     where: { leadId },
     create: {
       leadId,
       subject: result.data.subject.trim(),
-      icebreaker: result.data.icebreaker.trim(),
+      icebreaker,
       offerTemplateId: template.id,
       finalMessage,
       status: "DRAFT",
     },
     update: {
       subject: result.data.subject.trim(),
-      icebreaker: result.data.icebreaker.trim(),
+      icebreaker,
       offerTemplateId: template.id,
       finalMessage,
       status: "DRAFT",

@@ -18,6 +18,7 @@ enum LeadStatus {
   SCRAPE_FAILED
   ANALYZED
   ANALYZE_FAILED
+  DISQUALIFIED
   DRAFTED
   APPROVED
   EXPORTED
@@ -148,7 +149,10 @@ model Analysis {
   segmentKey String?
   summary    String? @db.Text // mivel foglalkoznak
   signals    Json? // fájópontok / kapaszkodók az icebreakerhez
-  model      String? // melyik Gemini modell
+  // A foglalás módja a jelekből: manual | online | unknown. Az "online" a foglalás-fájdalom
+  // szegmenseknél kizáró ok (DISQUALIFIED) — nekik már megvan, amit az ajánlatunk adna.
+  bookingMode String  @default("unknown")
+  model       String? // melyik Gemini modell
 
   createdAt DateTime @default(now())
 }

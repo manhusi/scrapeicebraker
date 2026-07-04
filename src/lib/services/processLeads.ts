@@ -8,6 +8,7 @@ export type ProcessSummary = {
   scraped: number;
   scrapeFailed: number;
   analyzed: number;
+  disqualified: number;
   analyzeFailed: number;
 };
 
@@ -26,6 +27,7 @@ export async function processPendingLeads(opts: {
     scraped: scrape.scraped,
     scrapeFailed: scrape.failed,
     analyzed: analyze.analyzed,
+    disqualified: analyze.disqualified,
     analyzeFailed: analyze.failed,
   };
 }

@@ -20,6 +20,7 @@ type ProcessSummary = {
   scraped: number;
   scrapeFailed: number;
   analyzed: number;
+  disqualified: number;
   analyzeFailed: number;
 };
 
@@ -143,6 +144,9 @@ export default function ImportPage() {
           <ul className="muted" style={{ lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
             <li>{processed.scraped} weboldal beolvasva</li>
             <li>{processed.analyzed} lead elemezve</li>
+            {processed.disqualified > 0 && (
+              <li>{processed.disqualified} nem célpont (már online foglal)</li>
+            )}
             {processed.scrapeFailed + processed.analyzeFailed > 0 && (
               <li style={{ color: "var(--danger)" }}>
                 {processed.scrapeFailed + processed.analyzeFailed} hiba — a futószalagon látod

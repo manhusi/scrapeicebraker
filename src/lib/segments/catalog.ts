@@ -51,6 +51,14 @@ export const SEGMENT_CATALOG: SegmentDef[] = [
 
 export const SEGMENT_KEYS = SEGMENT_CATALOG.map((s) => s.key);
 
+// A foglalás-fájdalom szegmensek: ezeknél az ajánlatunk MAGA az online foglalás+fizetés,
+// ezért aki már online foglal, az NEM célpont (DISQUALIFIED). Lásd docs/ICEBREAKER.md.
+export const BOOKING_PAIN_SEGMENTS = new Set([
+  "booking_lodge",
+  "service_wellness",
+  "event_program",
+]);
+
 // Idempotens seed: hiányzót létrehoz, meglévőt békén hagy (admin-szerkesztés védett).
 export async function seedSegments(): Promise<{ created: number; existing: number }> {
   let created = 0;

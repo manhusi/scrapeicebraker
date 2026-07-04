@@ -72,6 +72,17 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
 - **Siker:** minden oldal a v3 oldaltérkép szerint renderel valós adattal, tsc 0 hiba, a teljes
   út (import → feldolgozás → csoportosítás → megírás → átnézés → export) végigjárható a felületen.
 
+### Fázis 9 — Icebreaker-igazság + kvalifikáció ✅
+- A v1 icebreaker manufaktúrázta a fájdalmat (25-ből 19 ugyanazzal a „kézi kör" sablonnal zárt,
+  online-foglalós leadeknek is állította a kézi munkát — a régi scraper hibája). Javítás:
+  (1) az analízis eldönti a `bookingMode`-ot (manual/online/unknown) + kiszűri a scrape-szemetet;
+  (2) a foglalás-fájdalom szegmenseknél az online-foglalós lead DISQUALIFIED (nem célpont, de látható);
+  (3) az icebreaker-prompt átírva: feltételes+igaz+változatos átvezetés, tiltott sablonfarok, nincs
+  törzs-szivárgás; (4) a duplikáció-bug javítva (stripLeakedOpening). Spec: `docs/ICEBREAKER.md`.
+- **Siker:** valós Gemini-verifikáció (9 lead újraelemzve, 4 helyesen DISQUALIFIED /Wishkó, StagLand,
+  Mátra ForRest, Pilis Kabin — mind online foglal/; 5 újragenerált icebreaker: 0 sablonfarok /volt 19/25/,
+  0 nonszensz, 0 duplikáció; a Google-chrome hallucináció eltűnt). tsc 0.
+
 ### Fázis 8 — Profil + ajánlat admin ✅
 - MyProfile (mivel foglalkozom / ajánlataim kontextusa) és OfferTemplate szerkesztő UI.
 - **Siker:** felületen szerkeszthető a saját kontextus és a sablonok, a generálás ezt használja.

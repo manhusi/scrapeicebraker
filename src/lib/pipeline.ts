@@ -12,6 +12,7 @@ export const STATUS_META: Record<LeadStatus, StatusMeta> = {
   SCRAPE_FAILED: { label: "Nem olvasható", color: "#f85149" },
   ANALYZED: { label: "Elemezve", color: "#58a6ff" },
   ANALYZE_FAILED: { label: "Elemzés hiba", color: "#f85149" },
+  DISQUALIFIED: { label: "Nem célpont", color: "#6e7681" },
   DRAFTED: { label: "Átnézésre vár", color: "#d29922" },
   APPROVED: { label: "Jóváhagyva", color: "#8957e5" },
   EXPORTED: { label: "Exportálva", color: "#2ea043" },
@@ -30,7 +31,14 @@ export const MAIN_FLOW: LeadStatus[] = [
 // Mellék-állapotok (hibák) — külön, figyelmeztető jelöléssel.
 export const FAILED_STATES: LeadStatus[] = ["SCRAPE_FAILED", "ANALYZE_FAILED"];
 
-export const ALL_STATUSES: LeadStatus[] = [...MAIN_FLOW, ...FAILED_STATES];
+// Kizárt: elemezve, de nem célpont (pl. már online foglal) — se nem boldog-út, se nem hiba.
+export const EXCLUDED_STATES: LeadStatus[] = ["DISQUALIFIED"];
+
+export const ALL_STATUSES: LeadStatus[] = [
+  ...MAIN_FLOW,
+  ...EXCLUDED_STATES,
+  ...FAILED_STATES,
+];
 
 export function isLeadStatus(v: string): v is LeadStatus {
   return (ALL_STATUSES as string[]).includes(v);

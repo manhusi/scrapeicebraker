@@ -38,6 +38,7 @@ export type Conveyor = {
   processable: number; // új, beolvasásra váró (van weboldala)
   noWebsite: number; // új, de weboldal nélkül — sosem lesz feldolgozható
   failed: number; // beolvasás/elemzés hiba
+  disqualified: number; // elemezve, de nem célpont (pl. már online foglal)
   groups: SegmentGroup[];
   campaigns: CampaignRow[];
   templates: { id: string; name: string; segmentKey: string }[]; // inline ajánlat-választóhoz
@@ -51,6 +52,7 @@ export async function getConveyor(): Promise<Conveyor> {
     processable,
     noWebsite,
     failed,
+    disqualified,
     unassigned,
     segments,
     campaigns,
@@ -63,6 +65,7 @@ export async function getConveyor(): Promise<Conveyor> {
     prisma.lead.count({
       where: { status: { in: ["SCRAPE_FAILED", "ANALYZE_FAILED"] } },
     }),
+    prisma.lead.count({ where: { status: "DISQUALIFIED" } }),
     prisma.lead.findMany({
       where: { status: "ANALYZED", campaignId: null },
       select: { analysis: { select: { segmentKey: true } } },
@@ -156,6 +159,7 @@ export async function getConveyor(): Promise<Conveyor> {
     processable,
     noWebsite,
     failed,
+    disqualified,
     groups,
     campaigns: rows,
     templates,

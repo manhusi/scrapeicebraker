@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { generateJson } from "@/lib/gemini/client";
+import { BOOKING_PAIN_SEGMENTS } from "@/lib/segments/catalog";
 import {
   buildAnalysisPrompt,
   ANALYSIS_SCHEMA,
@@ -8,6 +9,7 @@ import {
 
 export type AnalyzeResult =
   | { leadId: string; status: "analyzed"; segmentKey: string }
+  | { leadId: string; status: "disqualified"; segmentKey: string }
   | { leadId: string; status: "skipped_no_content" }
   | { leadId: string; status: "skipped_cached" }
   | { leadId: string; status: "failed"; reason: string };
@@ -59,6 +61,11 @@ export async function analyzeLead(
     ? result.data.segmentKey
     : "unclear";
 
+  const bookingMode: "online" | "manual" | "unknown" =
+    result.data.bookingMode === "online" || result.data.bookingMode === "manual"
+      ? result.data.bookingMode
+      : "unknown";
+
   await prisma.analysis.upsert({
     where: { leadId },
     create: {
@@ -66,28 +73,40 @@ export async function analyzeLead(
       segmentKey,
       summary: result.data.summary,
       signals: result.data.signals,
+      bookingMode,
       model: result.model,
     },
     update: {
       segmentKey,
       summary: result.data.summary,
       signals: result.data.signals,
+      bookingMode,
       model: result.model,
       createdAt: new Date(),
     },
   });
 
+  // Kvalifikációs kapu (docs/ICEBREAKER.md): a foglalás-fájdalom szegmenseknél az online-foglalós
+  // lead NEM célpont — nekik már megvan, amit az ajánlatunk adna. DISQUALIFIED, de nem vész el.
+  const disqualified =
+    bookingMode === "online" && BOOKING_PAIN_SEGMENTS.has(segmentKey);
+
   await prisma.lead.update({
     where: { id: leadId },
-    data: { status: "ANALYZED" },
+    data: { status: disqualified ? "DISQUALIFIED" : "ANALYZED" },
   });
 
-  return { leadId, status: "analyzed", segmentKey };
+  return {
+    leadId,
+    status: disqualified ? "disqualified" : "analyzed",
+    segmentKey,
+  };
 }
 
 export type BatchAnalyzeSummary = {
   processed: number;
   analyzed: number;
+  disqualified: number;
   failed: number;
   skipped: number;
 };
@@ -128,6 +147,7 @@ export async function analyzePendingLeads(opts: {
   const summary: BatchAnalyzeSummary = {
     processed: 0,
     analyzed: 0,
+    disqualified: 0,
     failed: 0,
     skipped: 0,
   };
@@ -136,6 +156,7 @@ export async function analyzePendingLeads(opts: {
     const r = await analyzeLead(l.id, { force: opts.includeFailed });
     summary.processed++;
     if (r.status === "analyzed") summary.analyzed++;
+    else if (r.status === "disqualified") summary.disqualified++;
     else if (r.status === "failed") summary.failed++;
     else summary.skipped++;
   });
