@@ -65,6 +65,13 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
 - APPROVED üzenetek → Instantly-kompatibilis CSV (email, név, icebreaker, üzenet, custom mezők).
 - **Siker:** letöltött CSV ténylegesen importálható Instantly-be, státusz EXPORTED.
 
+### Fázis 7.5 — UI v3: Futószalag (teljes UI-újraírás)
+- A v2 UI (kampány-központú home + lead-raktár) teljes leváltása a `docs/UX.md` v3 spec szerint:
+  home = futószalag (6 állomás, egy kiemelt következő lépés), dedikált review fókusz-mód,
+  design-rendszer (CSS-változók + primitívek), halott route-ok törlése.
+- **Siker:** minden oldal a v3 oldaltérkép szerint renderel valós adattal, tsc 0 hiba, a teljes
+  út (import → feldolgozás → csoportosítás → megírás → átnézés → export) végigjárható a felületen.
+
 ### Fázis 8 — Profil + ajánlat admin
 - MyProfile (mivel foglalkozom / ajánlataim kontextusa) és OfferTemplate szerkesztő UI.
 - **Siker:** felületen szerkeszthető a saját kontextus és a sablonok, a generálás ezt használja.
@@ -131,5 +138,22 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   BUG-JAVÍTÁS: a review prev/next mostantól a lead kampányán BELÜL lépked (nem globálisan) — két
   párhuzamos kampány nem keveredik. Törölve: nextAction.ts, NextActionCard.
   (Verifikálva: 6 útvonal 200, kártya-CTA + raktár renderel, tsc 0, log 0.)
-- **Következő:** Fázis 7 — Instantly CSV export (kampányonként, az APPROVED üzenetekből; a checklist
-  5. lépése már mutatja a helyét).
+- **Fázis 7 — KÓD KÉSZ, VERIFIKÁLÁS NYITOTT** (a `fazis7` commitban bekerült: `exportCampaign.ts`,
+  `/api/campaigns/[id]/export`, export gomb — de valós Instantly-importtal még NEM verifikált,
+  és ez a bejegyzés utólag pótolva: a doksi-frissítés akkor kimaradt /tanulság: a 7. lépés nem opcionális/).
+- **Fázis 7.5 — KÉSZ: UI v3 „Futószalag"** (verifikálva élőben: 9 útvonal 200, tsc 0, szerver-log 0;
+  jóváhagyás→automata továbblépés review-ban élesben tesztelve majd visszavonva; egy-kattintásos
+  szegmens→kampány tesztelve /7 lead, inline ajánlat-választó megjelent/ majd visszavonva; `unclear`
+  fail-closed). A teljes régi UI törölve, semmi nem maradt belőle. Új: `src/app/globals.css`
+  (CSS-változók), `src/app/ui/` (Button/Badge/EmptyState/TopNav/api.ts), `lib/services/conveyor.ts`
+  (a home egy forrás-igazsága, downstream-first kiemelés), `/review/[campaignId]` fókusz-mód (az
+  üzenet-szerkesztés EGYETLEN helye), `/settings` (kulcsszavak + ajánlat/profil olvasva),
+  `assignSegmentToCampaign` + `POST /api/campaigns/from-segment`, kampány-átnevezés a PATCH-ben.
+  Törölve: PoolBar/CampaignChecklist/PipelineStepper/StatusBadge/MessageEditor/KeywordManager(régi),
+  `/keywords` oldal, halott route-ok (`/api/scrape`, `/api/analyze`, `/api/generate`),
+  `campaignNextStep`/`getPoolSummary`. Bálint döntései: home=futószalag; feldolgozás import után
+  EGY kattintás (nem automata — kredit-kontroll); csoportosítás egy-kattintásos ajánlat (nem automata);
+  sötét téma rendszerezve. Lecke: dev-szerver alatt tömeges fájlcsere → `.next` korrupció (500),
+  gyógymód: `rm -rf .next` + újraindítás.
+- **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész, a bizonyíték
+  hiányzik), majd Fázis 8 (ajánlat + profil szerkesztés) a `/settings` alá.

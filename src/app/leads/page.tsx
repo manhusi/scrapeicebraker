@@ -1,32 +1,32 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { LeadStatus, Prisma } from "@prisma/client";
-import { isLeadStatus, STATUS_META } from "@/lib/pipeline";
-import PipelineStepper from "@/app/components/PipelineStepper";
-import StatusBadge from "@/app/components/StatusBadge";
+import { isLeadStatus, STATUS_META, ALL_STATUSES } from "@/lib/pipeline";
+import Badge from "@/app/ui/Badge";
+import EmptyState from "@/app/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-const wrap: React.CSSProperties = {
-  maxWidth: 980,
-  margin: "0 auto",
-  padding: "32px 24px",
-};
+// Lead-állomány (UX.md v3): kereshető/szűrhető lista — információ, nem munka.
 
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
   const activeStatus: LeadStatus | undefined =
     status && isLeadStatus(status) ? status : undefined;
+  const query = q?.trim() || undefined;
 
-  const where: Prisma.LeadWhereInput = activeStatus
-    ? { status: activeStatus }
-    : {};
+  const where: Prisma.LeadWhereInput = {
+    ...(activeStatus ? { status: activeStatus } : {}),
+    ...(query
+      ? { businessName: { contains: query, mode: "insensitive" as const } }
+      : {}),
+  };
 
-  const [statusGroups, leads] = await Promise.all([
+  const [statusGroups, leads, segments] = await Promise.all([
     prisma.lead.groupBy({ by: ["status"], _count: true }),
     prisma.lead.findMany({
       where,
@@ -36,88 +36,103 @@ export default async function LeadsPage({
         id: true,
         businessName: true,
         category: true,
-        email: true,
         status: true,
         analysis: { select: { segmentKey: true } },
-        campaign: { select: { name: true } },
+        campaign: { select: { id: true, name: true } },
       },
     }),
+    prisma.segment.findMany({ select: { key: true, name: true } }),
   ]);
 
   const counts: Record<string, number> = {};
   for (const g of statusGroups) counts[g.status] = g._count;
+  const segmentName = new Map(segments.map((s) => [s.key, s.name]));
 
   return (
-    <main style={wrap}>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Leadek</h1>
+    <main className="page">
+      <h1>Leadek</h1>
+      <p className="page-lead">Minden behozott cég, állapot szerint szűrhetően.</p>
 
-      <PipelineStepper counts={counts} active={activeStatus} />
-
-      <div style={{ margin: "20px 0 10px", color: "#9aa1ab", fontSize: 14 }}>
-        {activeStatus ? (
-          <>
-            Szűrés: <strong style={{ color: STATUS_META[activeStatus].color }}>
-              {STATUS_META[activeStatus].label}
-            </strong>{" "}
-            ({leads.length}) ·{" "}
-            <Link href="/leads" style={{ color: "#7aa2ff" }}>
-              összes
-            </Link>
-          </>
-        ) : (
-          <>Összes lead ({leads.length})</>
-        )}
+      {/* Állapot-szűrő chipek — ember-nyelvű címkékkel (lib/pipeline.ts) */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        <Link href="/leads" className={`chip${!activeStatus ? " is-active" : ""}`}>
+          Összes
+        </Link>
+        {ALL_STATUSES.filter((s) => (counts[s] ?? 0) > 0).map((s) => (
+          <Link
+            key={s}
+            href={`/leads?status=${s}`}
+            className={`chip${activeStatus === s ? " is-active" : ""}`}
+          >
+            {STATUS_META[s].label} · {counts[s]}
+          </Link>
+        ))}
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-        <thead>
-          <tr style={{ color: "#9aa1ab", textAlign: "left" }}>
-            <th style={{ padding: "8px" }}>Cég</th>
-            <th style={{ padding: "8px" }}>Szegmens</th>
-            <th style={{ padding: "8px" }}>Kampány</th>
-            <th style={{ padding: "8px" }}>Státusz</th>
-            <th style={{ padding: "8px" }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {leads.map((l) => (
-            <tr key={l.id} style={{ borderTop: "1px solid #1c2230" }}>
-              <td style={{ padding: "8px" }}>
-                <Link
-                  href={`/leads/${l.id}`}
-                  style={{ color: "#e6e8ec", textDecoration: "none", fontWeight: 600 }}
-                >
-                  {l.businessName}
-                </Link>
-                <div style={{ color: "#6e7681", fontSize: 12 }}>
-                  {l.category ?? "—"}
-                </div>
-              </td>
-              <td style={{ padding: "8px", color: "#58a6ff" }}>
-                {l.analysis?.segmentKey ?? "—"}
-              </td>
-              <td style={{ padding: "8px", color: "#9aa1ab" }}>
-                {l.campaign?.name ?? "—"}
-              </td>
-              <td style={{ padding: "8px" }}>
-                <StatusBadge status={l.status} />
-              </td>
-              <td style={{ padding: "8px", textAlign: "right" }}>
-                <Link
-                  href={`/leads/${l.id}`}
-                  style={{ color: "#7aa2ff", textDecoration: "none", fontSize: 13 }}
-                >
-                  megnyit →
-                </Link>
-              </td>
+      {/* Keresés */}
+      <form method="get" style={{ marginBottom: 16 }}>
+        {activeStatus && <input type="hidden" name="status" value={activeStatus} />}
+        <input
+          className="input"
+          type="search"
+          name="q"
+          defaultValue={query ?? ""}
+          placeholder="keresés cégnévre…"
+          style={{ width: 280 }}
+        />
+      </form>
+
+      {leads.length === 0 ? (
+        <EmptyState>
+          Nincs lead ebben a nézetben.{" "}
+          <Link href="/import">Importálj egy CSV-t</Link>, vagy nézd az{" "}
+          <Link href="/leads">összeset</Link>.
+        </EmptyState>
+      ) : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Cég</th>
+              <th>Szegmens</th>
+              <th>Kampány</th>
+              <th>Állapot</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {leads.length === 0 && (
-        <p style={{ color: "#9aa1ab", marginTop: 20 }}>
-          Nincs lead ebben az állapotban.
-        </p>
+          </thead>
+          <tbody>
+            {leads.map((l) => (
+              <tr key={l.id}>
+                <td>
+                  <Link
+                    href={`/leads/${l.id}`}
+                    style={{ color: "var(--text)", textDecoration: "none", fontWeight: 600 }}
+                  >
+                    {l.businessName}
+                  </Link>
+                  <div className="faint" style={{ fontSize: 12 }}>
+                    {l.category ?? "—"}
+                  </div>
+                </td>
+                <td className="muted">
+                  {l.analysis?.segmentKey
+                    ? segmentName.get(l.analysis.segmentKey) ?? l.analysis.segmentKey
+                    : "—"}
+                </td>
+                <td className="muted">
+                  {l.campaign ? (
+                    <Link href={`/campaigns/${l.campaign.id}`} style={{ textDecoration: "none" }}>
+                      {l.campaign.name}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td>
+                  <Badge status={l.status} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </main>
   );

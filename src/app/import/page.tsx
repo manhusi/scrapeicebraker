@@ -1,10 +1,14 @@
 "use client";
 
+// Behozás (1. állomás): CSV fel → összegző → feldolgozás EGY kattintással (Bálint döntése:
+// a pénzköltő lépés nem automatikus, de nem is kell érte máshova menni).
+
 import { useState } from "react";
 import Link from "next/link";
+import Button from "@/app/ui/Button";
+import { apiCall } from "@/app/ui/api";
 
 type ImportSummary = {
-  batchId: string;
   totalRows: number;
   inserted: number;
   skippedErrorRows: number;
@@ -12,26 +16,29 @@ type ImportSummary = {
   skippedAlreadyExists: number;
 };
 
-const box: React.CSSProperties = {
-  background: "#141821",
-  border: "1px solid #222835",
-  borderRadius: 12,
-  padding: 20,
+type ProcessSummary = {
+  scraped: number;
+  scrapeFailed: number;
+  analyzed: number;
+  analyzeFailed: number;
 };
 
 export default function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [keyword, setKeyword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [processed, setProcessed] = useState<ProcessSummary | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
-    setLoading(true);
+    setBusy(true);
     setError(null);
     setSummary(null);
+    setProcessed(null);
 
     const form = new FormData();
     form.append("file", file);
@@ -40,116 +47,110 @@ export default function ImportPage() {
     try {
       const res = await fetch("/api/import", { method: "POST", body: form });
       const data = await res.json();
-      if (!res.ok || !data.ok) {
-        setError(data.error ?? "Ismeretlen hiba az importnál.");
-      } else {
-        setSummary(data.summary as ImportSummary);
-      }
+      if (!res.ok || !data.ok) setError(data.error ?? "Ismeretlen hiba az importnál.");
+      else setSummary(data.summary as ImportSummary);
     } catch {
       setError("Hálózati hiba az import közben.");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
+  async function runProcess() {
+    setProcessing(true);
+    setError(null);
+    const r = await apiCall<{ summary: ProcessSummary }>("/api/process", {
+      body: { limit: 50 },
+    });
+    setProcessing(false);
+    if (!r.ok) setError(`Hiba a feldolgozásnál: ${r.error}`);
+    else setProcessed(r.summary);
+  }
+
   return (
-    <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
-      <Link href="/" style={{ color: "#7aa2ff", textDecoration: "none" }}>
-        ← Vissza
+    <main className="page" style={{ maxWidth: 720 }}>
+      <Link href="/" style={{ textDecoration: "none" }}>
+        ← Futószalag
       </Link>
-      <h1 style={{ fontSize: 26, marginTop: 16, marginBottom: 4 }}>
-        Lead import
-      </h1>
-      <p style={{ color: "#9aa1ab", marginTop: 0 }}>
-        Apify page-scraper CSV feltöltése. A duplikátumok (pageId) automatikusan
-        kimaradnak.
+      <h1 style={{ marginTop: 16 }}>Behozás</h1>
+      <p className="page-lead">
+        Apify CSV feltöltése. A duplikátumok automatikusan kimaradnak, semmi nem vész el.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ ...box, marginTop: 24 }}>
+      <form onSubmit={handleSubmit} className="card">
         <label style={{ display: "block", marginBottom: 16 }}>
-          <div style={{ marginBottom: 6, color: "#c7ccd4" }}>
-            Kulcsszó (opcionális)
-          </div>
+          <span className="field-label">Kulcsszó (melyik keresésből jött a lista)</span>
           <input
             type="text"
+            className="input"
+            style={{ width: "100%" }}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="pl. szauna, tábor, edzőterem…"
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid #2a3040",
-              background: "#0e1117",
-              color: "#e6e8ec",
-              boxSizing: "border-box",
-            }}
           />
         </label>
 
         <label style={{ display: "block", marginBottom: 20 }}>
-          <div style={{ marginBottom: 6, color: "#c7ccd4" }}>CSV fájl</div>
+          <span className="field-label">CSV fájl</span>
           <input
             type="file"
             accept=".csv,text/csv"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            style={{ color: "#c7ccd4" }}
+            style={{ color: "var(--text-dim)" }}
           />
         </label>
 
-        <button
-          type="submit"
-          disabled={!file || loading}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 8,
-            border: "none",
-            background: !file || loading ? "#2a3040" : "#3b6cff",
-            color: "#fff",
-            fontWeight: 600,
-            cursor: !file || loading ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Importálás…" : "Import indítása"}
-        </button>
+        <Button type="submit" variant="primary" disabled={!file || busy}>
+          {busy ? "Importálás…" : "Import indítása"}
+        </Button>
       </form>
 
       {error && (
-        <div
-          style={{
-            ...box,
-            marginTop: 20,
-            borderColor: "#5a2530",
-            color: "#f85149",
-          }}
-        >
+        <div className="card" style={{ marginTop: 16, borderColor: "var(--danger-border)", color: "var(--danger)" }}>
           {error}
         </div>
       )}
 
       {summary && (
-        <div style={{ ...box, marginTop: 20 }}>
-          <h2 style={{ fontSize: 18, marginTop: 0 }}>Import kész ✅</h2>
-          <ul style={{ lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
+        <div className="card" style={{ marginTop: 16 }}>
+          <h2 style={{ fontSize: 17, marginTop: 0 }}>Import kész ✓</h2>
+          <ul className="muted" style={{ lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
             <li>
-              <strong style={{ color: "#3fb950" }}>{summary.inserted}</strong> új
-              lead beszúrva
+              <strong style={{ color: "var(--success)" }}>{summary.inserted}</strong>{" "}
+              új lead behozva
             </li>
-            <li>{summary.totalRows} hasznos sor a fájlban</li>
-            <li>{summary.skippedAlreadyExists} kihagyva (már a DB-ben)</li>
+            <li>{summary.skippedAlreadyExists} kihagyva (már bent volt)</li>
             <li>{summary.skippedDuplicateInFile} kihagyva (fájlon belüli dupla)</li>
             <li>{summary.skippedErrorRows} kihagyva (üres/hibás sor)</li>
           </ul>
-          <Link
-            href="/"
-            style={{
-              display: "inline-block",
-              marginTop: 16,
-              color: "#7aa2ff",
-              textDecoration: "none",
-            }}
-          >
-            → Leadek megtekintése
+
+          {/* A következő lépés helyben — nem kell keresgélni. */}
+          {!processed && (
+            <div style={{ marginTop: 16 }}>
+              <Button variant="primary" onClick={runProcess} disabled={processing}>
+                {processing
+                  ? "Feldolgozás fut… (1-2 perc)"
+                  : "Feldolgozás indítása (beolvasás + elemzés)"}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {processed && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h2 style={{ fontSize: 17, marginTop: 0 }}>Feldolgozás kész ✓</h2>
+          <ul className="muted" style={{ lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
+            <li>{processed.scraped} weboldal beolvasva</li>
+            <li>{processed.analyzed} lead elemezve</li>
+            {processed.scrapeFailed + processed.analyzeFailed > 0 && (
+              <li style={{ color: "var(--danger)" }}>
+                {processed.scrapeFailed + processed.analyzeFailed} hiba — a futószalagon látod
+              </li>
+            )}
+          </ul>
+          <Link href="/" className="btn btn-primary" style={{ marginTop: 16 }}>
+            → Futószalag (csoportosítás)
           </Link>
         </div>
       )}

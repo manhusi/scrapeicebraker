@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  setCampaignName,
   setCampaignStatus,
   setCampaignTemplate,
 } from "@/lib/services/campaigns";
@@ -27,6 +28,9 @@ export async function PATCH(
     }
     if (body.offerTemplateId !== undefined) {
       await setCampaignTemplate(id, body.offerTemplateId);
+    }
+    if (body.name !== undefined) {
+      await setCampaignName(id, String(body.name));
     }
 
     return NextResponse.json({ ok: true });

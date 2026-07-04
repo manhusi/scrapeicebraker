@@ -19,37 +19,6 @@ export type CampaignWithCounts = {
   createdAt: Date;
 };
 
-// EGY kampány következő lépése — a kampány-kártya CTA-ja ebből jön (UX: a rendszer vezet).
-export type CampaignNextStep = {
-  label: string;
-  detail: string;
-};
-
-export function campaignNextStep(c: CampaignWithCounts): CampaignNextStep {
-  if (c.leadCount === 0)
-    return { label: "Leadek hozzáadása", detail: "még üres a kampány" };
-  if (!c.offerTemplateId)
-    return { label: "Ajánlat kiválasztása", detail: `${c.leadCount} lead vár` };
-  if (c.draftedCount > 0)
-    return {
-      label: "Átnézés folytatása",
-      detail: `${c.draftedCount} üzenet átnézésre vár`,
-    };
-  if (c.generatableCount > 0)
-    return {
-      label: "Megírás indítása",
-      detail: `${c.generatableCount} lead vár üzenetre`,
-    };
-  if (c.approvedCount > 0)
-    return {
-      label: "Export Instantly-be",
-      detail: `${c.approvedCount} üzenet kész`,
-    };
-  if (c.exportedCount > 0 && c.exportedCount === c.leadCount)
-    return { label: "Kész", detail: "minden exportálva" };
-  return { label: "Megnyitás", detail: `${c.leadCount} lead` };
-}
-
 export async function listCampaignsWithCounts(): Promise<CampaignWithCounts[]> {
   const campaigns = await prisma.campaign.findMany({
     orderBy: { createdAt: "desc" },
@@ -87,42 +56,6 @@ export async function listCampaignsWithCounts(): Promise<CampaignWithCounts[]> {
   );
 }
 
-// A lead-raktár összefoglalója: ami még NINCS kampányban (utánpótlás).
-export type PoolSummary = {
-  processable: number; // új, feldolgozásra váró (van weboldala)
-  unassignedBySegment: { segmentKey: string; count: number }[]; // elemzett, kampány nélkül
-  failed: number; // beolvasás/elemzés hiba
-};
-
-export async function getPoolSummary(): Promise<PoolSummary> {
-  const [processable, unassigned, failed] = await Promise.all([
-    prisma.lead.count({
-      where: { status: "IMPORTED", websiteUrl: { not: null } },
-    }),
-    prisma.lead.findMany({
-      where: { status: "ANALYZED", campaignId: null },
-      select: { analysis: { select: { segmentKey: true } } },
-    }),
-    prisma.lead.count({
-      where: { status: { in: ["SCRAPE_FAILED", "ANALYZE_FAILED"] } },
-    }),
-  ]);
-
-  const bySegment = new Map<string, number>();
-  for (const l of unassigned) {
-    const key = l.analysis?.segmentKey ?? "unclear";
-    bySegment.set(key, (bySegment.get(key) ?? 0) + 1);
-  }
-
-  return {
-    processable,
-    unassignedBySegment: [...bySegment.entries()]
-      .map(([segmentKey, count]) => ({ segmentKey, count }))
-      .sort((a, b) => b.count - a.count),
-    failed,
-  };
-}
-
 export async function createCampaign(
   name: string,
   offerTemplateId?: string | null,
@@ -136,6 +69,65 @@ export async function createCampaign(
 
 export async function setCampaignStatus(id: string, status: CampaignStatus) {
   return prisma.campaign.update({ where: { id }, data: { status } });
+}
+
+export async function setCampaignName(id: string, name: string) {
+  const n = name.trim();
+  if (!n) throw new Error("A kampány neve nem lehet üres.");
+  return prisma.campaign.update({ where: { id }, data: { name: n } });
+}
+
+// A 3. állomás (Csoportosítás) egy-kattintása: egy szegmens kampányra váró leadjei
+// a meglévő illő aktív kampányba mennek, vagy új kampány készül (név = szegmens neve,
+// ajánlat automatikusan, ha van aktív a szegmenshez). UX.md v3.
+export async function assignSegmentToCampaign(segmentKey: string): Promise<{
+  campaignId: string;
+  campaignName: string;
+  added: number;
+  created: boolean;
+}> {
+  if (segmentKey === "unclear")
+    throw new Error("A besorolatlan leadek kézi átnézést igényelnek.");
+
+  const existing = await prisma.campaign.findFirst({
+    where: {
+      status: { in: ["DRAFT", "READY"] },
+      offerTemplate: { segmentKey },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) {
+    const added = await addLeadsBySegment(existing.id, segmentKey);
+    return {
+      campaignId: existing.id,
+      campaignName: existing.name,
+      added,
+      created: false,
+    };
+  }
+
+  const segment = await prisma.segment.findUnique({
+    where: { key: segmentKey },
+  });
+  if (!segment) throw new Error("Nincs ilyen szegmens.");
+
+  const template = await prisma.offerTemplate.findFirst({
+    where: { segmentKey, active: true },
+  });
+
+  // Névütközésnél dátum-utótag, hogy két kampány sose legyen összetéveszthető.
+  const sameName = await prisma.campaign.findFirst({
+    where: { name: segment.name },
+  });
+  const name = sameName
+    ? `${segment.name} – ${new Date().toLocaleDateString("hu-HU")}`
+    : segment.name;
+
+  const campaign = await prisma.campaign.create({
+    data: { name, offerTemplateId: template?.id ?? null },
+  });
+  const added = await addLeadsBySegment(campaign.id, segmentKey);
+  return { campaignId: campaign.id, campaignName: name, added, created: true };
 }
 
 export async function setCampaignTemplate(

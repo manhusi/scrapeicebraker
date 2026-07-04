@@ -1,0 +1,257 @@
+/* Design-rendszer forrás-igazsága (UX.md v3): minden szín/térköz/sugár itt él.
+   Hex-kód komponensben tilos — kivétel a lib/pipeline.ts státusz-színei. */
+
+:root {
+  /* felületek */
+  --bg: #0b0d12;
+  --bg-raised: #141821;
+  --bg-inset: #0e1117;
+  --bg-hover: #1c2230;
+
+  /* vonalak */
+  --border: #222835;
+  --border-strong: #2a3040;
+
+  /* szöveg */
+  --text: #e6e8ec;
+  --text-dim: #9aa1ab;
+  --text-faint: #6e7681;
+
+  /* akcentusok */
+  --accent: #3b6cff;
+  --accent-soft: #141d33;
+  --accent-text: #7aa2ff;
+  --success: #3fb950;
+  --success-btn: #238636;
+  --warn: #d29922;
+  --danger: #f85149;
+  --danger-border: #5a2530;
+  --danger-soft: #2a1518;
+  --purple: #8957e5;
+
+  /* geometria */
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: var(--accent-text);
+}
+
+/* Oldal-keret: minden oldal ugyanabban a hasábban él. */
+.page {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.page h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+
+.page-lead {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.muted {
+  color: var(--text-dim);
+}
+
+.faint {
+  color: var(--text-faint);
+}
+
+/* Kártya */
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+
+/* Gombok */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  color: #fff;
+  background: var(--border-strong);
+  font-family: inherit;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+}
+
+.btn-success {
+  background: var(--success-btn);
+}
+
+.btn-warn {
+  background: var(--warn);
+}
+
+.btn-purple {
+  background: var(--purple);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* Űrlap-elemek */
+.input,
+.select,
+.textarea {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-inset);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* Táblázat */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  padding: 8px;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.table td {
+  padding: 8px;
+  border-top: 1px solid var(--bg-hover);
+}
+
+/* Futószalag-állomás (home) */
+.station {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  margin-bottom: 10px;
+}
+
+.station.is-next {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.station.is-idle {
+  background: transparent;
+  opacity: 0.6;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.station-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--bg-hover);
+  color: var(--text-faint);
+}
+
+.station.is-next .station-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.station-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.station-row + .station-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bg-hover);
+}
+
+/* Címke (badge) */
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  white-space: nowrap;
+}
+
+/* Szűrő-chip (lead-lista) */
+.chip {
+  display: inline-block;
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.chip.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-soft);
+}

@@ -2,6 +2,26 @@ import { prisma } from "@/lib/db";
 
 // Draft-review logika: szerkesztés + jóváhagyás. A jóváhagyás lép a lead-állapotgépen (DRAFTED→APPROVED).
 
+// A review-sor forrás-igazsága (UX.md v3): egy kampány üzenetes leadjei createdAt szerint,
+// a kampányon BELÜL — két párhuzamos kampány review-ja sosem keveredik.
+export async function getReviewQueue(campaignId: string) {
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+  });
+  if (!campaign) return null;
+
+  const leads = await prisma.lead.findMany({
+    where: { campaignId, message: { isNot: null } },
+    orderBy: { createdAt: "asc" },
+    include: {
+      message: true,
+      analysis: true,
+    },
+  });
+
+  return { campaign, leads };
+}
+
 export async function updateMessage(
   leadId: string,
   data: { subject?: string; finalMessage?: string },

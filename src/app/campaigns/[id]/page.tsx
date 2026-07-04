@@ -1,21 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import StatusBadge from "@/app/components/StatusBadge";
-import CampaignChecklist from "./CampaignChecklist";
-import ArchiveButton from "./ArchiveButton";
+import Badge from "@/app/ui/Badge";
+import CampaignAdmin from "./CampaignAdmin";
 
 export const dynamic = "force-dynamic";
 
-const box: React.CSSProperties = {
-  background: "#141821",
-  border: "1px solid #222835",
-  borderRadius: 12,
-  padding: 20,
-  marginTop: 16,
-};
+// Kampány-összegző (UX.md v3): áttekintés + adminisztráció. A munka a futószalagon
+// és a review fókusz-módban folyik — innen csak odalinkelünk.
 
-export default async function CampaignDetailPage({
+export default async function CampaignPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -24,91 +18,79 @@ export default async function CampaignDetailPage({
   const campaign = await prisma.campaign.findUnique({
     where: { id },
     include: {
-      offerTemplate: true,
+      offerTemplate: { select: { id: true, name: true } },
       leads: {
         orderBy: { businessName: "asc" },
-        select: {
-          id: true,
-          businessName: true,
-          email: true,
-          status: true,
-          createdAt: true,
-        },
+        select: { id: true, businessName: true, email: true, status: true },
       },
     },
   });
-
   if (!campaign) notFound();
 
-  const pendingGenerate = campaign.leads.filter(
-    (l) => l.status === "ANALYZED" && l.email,
-  ).length;
-  const draftedLeads = campaign.leads
-    .filter((l) => l.status === "DRAFTED")
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const approvedCount = campaign.leads.filter((l) => l.status === "APPROVED").length;
-  const exportedCount = campaign.leads.filter((l) => l.status === "EXPORTED").length;
+  const templates = await prisma.offerTemplate.findMany({
+    where: { active: true },
+    select: { id: true, name: true },
+    orderBy: { segmentKey: "asc" },
+  });
 
-  const [segments, templates] = await Promise.all([
-    prisma.segment.findMany({ select: { key: true } }),
-    prisma.offerTemplate.findMany({
-      where: { active: true },
-      select: { id: true, name: true, segmentKey: true },
-      orderBy: { segmentKey: "asc" },
-    }),
-  ]);
+  const drafted = campaign.leads.filter((l) => l.status === "DRAFTED").length;
+  const approved = campaign.leads.filter((l) => l.status === "APPROVED").length;
 
   return (
-    <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
-      <Link href="/campaigns" style={{ color: "#7aa2ff", textDecoration: "none" }}>
-        ← Kampányok
+    <main className="page">
+      <Link href="/" style={{ textDecoration: "none" }}>
+        ← Futószalag
       </Link>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 10 }}>
-        <h1 style={{ fontSize: 24, margin: 0 }}>{campaign.name}</h1>
-        <ArchiveButton campaignId={campaign.id} archived={campaign.status === "ARCHIVED"} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+        <h1 style={{ margin: 0 }}>{campaign.name}</h1>
+        <span className="muted" style={{ fontSize: 14 }}>
+          {campaign.leads.length} lead · {campaign.offerTemplate?.name ?? "nincs ajánlat"}
+        </span>
+        {drafted > 0 && (
+          <Link href={`/review/${campaign.id}`} className="btn btn-purple">
+            Átnézés ({drafted})
+          </Link>
+        )}
+        {approved > 0 && (
+          <span className="muted" style={{ fontSize: 13 }}>
+            {approved} küldésre kész — a futószalag Küldés állomásán exportálható
+          </span>
+        )}
       </div>
 
-      {/* Vezetett lépések */}
-      <div style={{ marginTop: 20 }}>
-        <CampaignChecklist
-          campaignId={campaign.id}
-          leadCount={campaign.leads.length}
-          hasTemplate={Boolean(campaign.offerTemplateId)}
-          templateName={campaign.offerTemplate?.name ?? null}
-          pendingGenerate={pendingGenerate}
-          draftedCount={draftedLeads.length}
-          approvedCount={approvedCount}
-          exportedCount={exportedCount}
-          firstDraftedLeadId={draftedLeads[0]?.id ?? null}
-          segments={segments.map((s) => s.key)}
-          templates={templates}
-        />
-      </div>
+      <CampaignAdmin
+        campaignId={campaign.id}
+        name={campaign.name}
+        archived={campaign.status === "ARCHIVED"}
+        templateId={campaign.offerTemplate?.id ?? null}
+        templates={templates}
+      />
 
-      {/* Tagok — másodlagos, összecsukható */}
-      <details style={box} open={campaign.leads.length <= 10}>
-        <summary style={{ cursor: "pointer", color: "#9aa1ab", fontSize: 15 }}>
-          Leadek a kampányban ({campaign.leads.length})
-        </summary>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginTop: 12 }}>
+      <div className="card" style={{ marginTop: 16 }}>
+        <table className="table">
           <tbody>
             {campaign.leads.map((l) => (
-              <tr key={l.id} style={{ borderTop: "1px solid #1c2230" }}>
-                <td style={{ padding: "7px 8px", fontWeight: 600 }}>
-                  <Link href={`/leads/${l.id}`} style={{ color: "#e6e8ec", textDecoration: "none" }}>
+              <tr key={l.id}>
+                <td style={{ fontWeight: 600 }}>
+                  <Link href={`/leads/${l.id}`} style={{ color: "var(--text)", textDecoration: "none" }}>
                     {l.businessName}
                   </Link>
                 </td>
-                <td style={{ padding: "7px 8px", color: "#9aa1ab" }}>{l.email ?? "— nincs email —"}</td>
-                <td style={{ padding: "7px 8px", textAlign: "right" }}>
-                  <StatusBadge status={l.status} />
+                <td className="muted">{l.email ?? "— nincs email —"}</td>
+                <td style={{ textAlign: "right" }}>
+                  <Badge status={l.status} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </details>
+        {campaign.leads.length === 0 && (
+          <p className="muted" style={{ margin: 0 }}>
+            Még nincs lead a kampányban — a futószalag Csoportosítás állomásán kerül ide.
+          </p>
+        )}
+      </div>
     </main>
   );
 }

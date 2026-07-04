@@ -1,24 +1,17 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import TopNav from "@/app/components/TopNav";
+import TopNav from "@/app/ui/TopNav";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Outreach Automation",
-  description: "Személyre szabott outreach pipeline",
+  title: "Outreach",
+  description: "Személyre szabott outreach — a futószalag",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="hu">
-      <body
-        style={{
-          margin: 0,
-          fontFamily:
-            "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
-          background: "#0b0d12",
-          color: "#e6e8ec",
-        }}
-      >
+      <body>
         <TopNav />
         {children}
       </body>
