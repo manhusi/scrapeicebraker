@@ -33,8 +33,10 @@ async function runPool<T>(
 }
 
 export async function reprocessAllLeads(
-  opts: { limit?: number } = {},
+  opts: { limit?: number; skip?: number } = {},
 ): Promise<ReprocessSummary> {
+  // A reprocess NEM üríti a poolt (a DRAFTED lead DRAFTED marad), ezért a kliens offset-tel
+  // lapoz (skip) — különben ugyanazt a batch-et ismételné a végtelenségig.
   const leads = await prisma.lead.findMany({
     where: {
       status: { in: ["ANALYZED", "DRAFTED", "ANALYZE_FAILED"] },
@@ -42,6 +44,7 @@ export async function reprocessAllLeads(
     },
     select: { id: true, message: { select: { edited: true } } },
     orderBy: { createdAt: "asc" },
+    ...(opts.skip ? { skip: opts.skip } : {}),
     ...(opts.limit ? { take: opts.limit } : {}),
   });
 

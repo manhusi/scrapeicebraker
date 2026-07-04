@@ -23,23 +23,39 @@ export default function ReprocessButton() {
 
   async function run() {
     setBusy(true);
-    setMsg("Frissítés fut… (elemzés + icebreaker, eltarthat pár percig)");
-    const r = await apiCall<{ summary: Summary }>("/api/reprocess", {
-      body: { limit: 100 },
-    });
-    setBusy(false);
-    if (!r.ok) {
-      setMsg(`Hiba: ${r.error}`);
-      return;
+    const BATCH = 20;
+    let skip = 0;
+    let regenerated = 0;
+    let keptEdited = 0;
+    let failed = 0;
+    try {
+      // Offset-lapozás: a reprocess nem üríti a poolt, ezért skip-pel haladunk végig.
+      for (let i = 0; i < 200; i++) {
+        setMsg(`Frissítés fut… ${regenerated} újraírva…`);
+        const r = await apiCall<{ summary: Summary }>("/api/reprocess", {
+          body: { limit: BATCH, skip },
+        });
+        if (!r.ok) {
+          setMsg(`Hiba: ${r.error} (${regenerated} kész)`);
+          return;
+        }
+        const s = r.summary;
+        regenerated += s.regenerated;
+        keptEdited += s.keptEdited;
+        failed += s.failed;
+        skip += s.considered;
+        if (s.considered < BATCH) break; // utolsó lap
+      }
+      setMsg(
+        `Kész: ${regenerated} icebreaker újraírva` +
+          (keptEdited > 0 ? `, ${keptEdited} kézi szerkesztés megőrizve` : "") +
+          (failed > 0 ? `, ${failed} kihagyva (nincs email)` : "") +
+          ".",
+      );
+    } finally {
+      setBusy(false);
+      router.refresh();
     }
-    const s = r.summary;
-    setMsg(
-      `Kész: ${s.regenerated} icebreaker újraírva` +
-        (s.keptEdited > 0 ? `, ${s.keptEdited} kézi szerkesztés megőrizve` : "") +
-        (s.failed > 0 ? `, ${s.failed} kihagyva (nincs email)` : "") +
-        ".",
-    );
-    router.refresh();
   }
 
   return (

@@ -8,7 +8,9 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const limit =
       typeof body.limit === "number" && body.limit > 0 ? body.limit : undefined;
-    const summary = await reprocessAllLeads({ limit });
+    const skip =
+      typeof body.skip === "number" && body.skip > 0 ? body.skip : undefined;
+    const summary = await reprocessAllLeads({ limit, skip });
     return NextResponse.json({ ok: true, summary });
   } catch (error) {
     return NextResponse.json(

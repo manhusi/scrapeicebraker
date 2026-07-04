@@ -29,29 +29,64 @@ function Note({ msg }: { msg: string | null }) {
   return <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>{msg}</div>;
 }
 
-// 2. állomás: beolvasás + elemzés egy láncban (adagolva; ha marad, jelezzük).
+// Egy kattintás = végigfut az EGÉSZ állományon, adagokban, élő haladással. A szerver-oldali
+// batch-limit így nem korlát: a kliens addig hívja, amíg van mit csinálni (biztonsági iteráció-plafon).
+function useBatchRunner() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function run(
+    step: (i: number) => Promise<{ ok: boolean; done: boolean; label: string }>,
+  ) {
+    setBusy(true);
+    try {
+      for (let i = 0; i < 200; i++) {
+        const r = await step(i);
+        setMsg(r.label);
+        if (!r.ok || r.done) break;
+      }
+    } finally {
+      setBusy(false);
+      router.refresh();
+    }
+  }
+
+  return { busy, msg, run };
+}
+
+// 2. állomás: beolvasás + elemzés, végig az összes új leaden.
 export function ProcessButton({ count }: { count: number }) {
-  const { busy, msg, run } = useAction();
+  const { busy, msg, run } = useBatchRunner();
+  const BATCH = 10;
 
   return (
     <div>
       <Button
         variant="primary"
         disabled={busy}
-        onClick={() =>
-          run(async () => {
+        onClick={() => {
+          let scraped = 0;
+          let analyzed = 0;
+          return run(async () => {
             const r = await apiCall<{
-              summary: { scraped: number; analyzed: number };
-            }>("/api/process", { body: { limit: 100 } });
-            if (!r.ok) return `Hiba: ${r.error}`;
-            const processed = Math.max(r.summary.scraped, r.summary.analyzed);
-            const remaining = count - processed;
-            const base = `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve.`;
-            return remaining > 0
-              ? `${base} Még ${remaining} vár — kattints újra a következő adagért.`
-              : base;
-          }, "Feldolgozás fut… (1-2 perc)")
-        }
+              summary: { scraped: number; analyzed: number; scrapeFailed: number; analyzeFailed: number };
+            }>("/api/process", { body: { limit: BATCH } });
+            if (!r.ok) return { ok: false, done: true, label: `Hiba: ${r.error}` };
+            scraped += r.summary.scraped;
+            analyzed += r.summary.analyzed;
+            const s = r.summary;
+            const progressed = s.scraped + s.scrapeFailed + s.analyzed + s.analyzeFailed;
+            const done = progressed === 0;
+            return {
+              ok: true,
+              done,
+              label: done
+                ? `Kész: ${scraped} beolvasva, ${analyzed} elemezve.`
+                : `Feldolgozás fut… ${scraped} beolvasva, ${analyzed} elemezve…`,
+            };
+          });
+        }}
       >
         {busy ? "Feldolgozás…" : `Feldolgozás indítása (${count})`}
       </Button>
@@ -60,28 +95,35 @@ export function ProcessButton({ count }: { count: number }) {
   );
 }
 
-// 3. állomás: minden elemzett + emailes lead megírása a közös sablonnal (adagolva).
+// 3. állomás: minden elemzett + emailes lead megírása a közös sablonnal, végig.
 export function WriteButton({ count }: { count: number }) {
-  const { busy, msg, run } = useAction();
+  const { busy, msg, run } = useBatchRunner();
+  const BATCH = 20;
 
   return (
     <div>
       <Button
         variant="primary"
         disabled={busy}
-        onClick={() =>
-          run(async () => {
-            const r = await apiCall<{ summary: { drafted: number } }>("/api/write", {
-              body: { limit: 100 },
-            });
-            if (!r.ok) return `Hiba: ${r.error}`;
-            const remaining = count - r.summary.drafted;
-            const base = `Kész: ${r.summary.drafted} üzenet megírva.`;
-            return remaining > 0
-              ? `${base} Még ${remaining} vár — kattints újra.`
-              : base;
-          }, "Megírás folyamatban… (eltarthat pár percig)")
-        }
+        onClick={() => {
+          let drafted = 0;
+          return run(async () => {
+            const r = await apiCall<{
+              summary: { processed: number; drafted: number };
+            }>("/api/write", { body: { limit: BATCH } });
+            if (!r.ok) return { ok: false, done: true, label: `Hiba: ${r.error} (${drafted} kész)` };
+            drafted += r.summary.drafted;
+            // Kész, ha kevesebb leadet talált a batch-nél, vagy egy batch nem haladt (csupa hiba).
+            const done = r.summary.processed < BATCH || r.summary.drafted === 0;
+            return {
+              ok: true,
+              done,
+              label: done
+                ? `Kész: ${drafted} üzenet megírva.`
+                : `Megírás fut… ${drafted}/${count} kész…`,
+            };
+          });
+        }}
       >
         {busy ? "Megírás…" : `Megírás (${count})`}
       </Button>
