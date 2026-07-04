@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import Badge from "@/app/ui/Badge";
 import CampaignAdmin from "./CampaignAdmin";
+import ReprocessButton from "./ReprocessButton";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,8 @@ export default async function CampaignPage({
         templateId={campaign.offerTemplate?.id ?? null}
         templates={templates}
       />
+
+      <ReprocessButton campaignId={campaign.id} />
 
       <div className="card" style={{ marginTop: 16 }}>
         <table className="table">
