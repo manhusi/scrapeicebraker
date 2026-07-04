@@ -138,9 +138,14 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   BUG-JAVÍTÁS: a review prev/next mostantól a lead kampányán BELÜL lépked (nem globálisan) — két
   párhuzamos kampány nem keveredik. Törölve: nextAction.ts, NextActionCard.
   (Verifikálva: 6 útvonal 200, kártya-CTA + raktár renderel, tsc 0, log 0.)
-- **Fázis 7 — KÓD KÉSZ, VERIFIKÁLÁS NYITOTT** (a `fazis7` commitban bekerült: `exportCampaign.ts`,
-  `/api/campaigns/[id]/export`, export gomb — de valós Instantly-importtal még NEM verifikált,
-  és ez a bejegyzés utólag pótolva: a doksi-frissítés akkor kimaradt /tanulság: a 7. lépés nem opcionális/).
+- **Fázis 7 — CSV VERIFIKÁLVA, INSTANTLY-IMPORT NYITOTT** (a `fazis7` commitban bekerült:
+  `exportCampaign.ts`, `/api/campaigns/[id]/export`, export gomb). A CSV-kimenet most VERIFIKÁLVA valós
+  kódúton (jóváhagyás→export→visszaállítás, éles adat érintetlen): helyes Instantly-fejlécek
+  (email, company_name, subject, message, website), minden sor oszlopszáma egyezik, a többsoros törzs +
+  speciális karakterek (`&`, `|`, ékezet) jól escape-elve, UTF-8 megőrizve, fájlnév-slug helyes,
+  a már EXPORTED sorok újratölthetők. NYITOTT (a te manuális lépésed): a letöltött CSV tényleges
+  betöltése egy Instantly-fiókba. Tanulság: a 7. lépés (verifikáció) nem opcionális — a doksi-frissítés
+  akkor kimaradt.
 - **Fázis 7.5 — KÉSZ: UI v3 „Futószalag"** (verifikálva élőben: 9 útvonal 200, tsc 0, szerver-log 0;
   jóváhagyás→automata továbblépés review-ban élesben tesztelve majd visszavonva; egy-kattintásos
   szegmens→kampány tesztelve /7 lead, inline ajánlat-választó megjelent/ majd visszavonva; `unclear`
