@@ -6,7 +6,7 @@ export type ApiResult<T = Record<string, unknown>> =
 
 export async function apiCall<T = Record<string, unknown>>(
   path: string,
-  opts?: { method?: "POST" | "PATCH"; body?: object },
+  opts?: { method?: "POST" | "PATCH" | "PUT"; body?: object },
 ): Promise<ApiResult<T>> {
   try {
     const res = await fetch(path, {

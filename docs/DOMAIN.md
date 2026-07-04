@@ -116,7 +116,17 @@ Architektúra: az email a videóra kér igent; a Grand Slam a videóban (lásd `
 - OfferTemplate N—1 Segment; Analysis a `segmentKey`-en át köt a Segmenthez és sablonokhoz.
 - Message N—1 OfferTemplate.
 
+## Fázis 8 — véglegesített döntések (admin)
+- **MyProfile = kulcsolt morzsák** (nem egyetlen dokumentum). A `voice` kulcs LÖKET-hordozó: a
+  generálás közvetlenül ezt olvassa (`generateMessage.ts`). A `/settings` szerkeszti a content-et
+  kulcsonként, és új kulcs is felvehető. A morzsák törlése nem cél (a `voice` sose tűnhet el).
+- **OfferTemplate szerkesztés:** name + body + `active` kapcsoló + szegmens; új sablon létrehozható.
+  Kemény törlés NINCS — az `active:false` kiveszi az ÚJ választásból, de a történetet/hivatkozásokat
+  őrzi (a meglévő kampányok generálása `active`-tól függetlenül működik, mert a Message a template.body-t
+  fixálja). Egy szegmenshez több aktív sablon lehet; a Csoportosítás/generálás az elsőt (legfrissebbet) veszi.
+- **Setting `offer_mode` (hybrid/auto): SZÁNDÉKOSAN nincs a UI-n** — az auto-mód jóváhagyás nélkül küldene
+  (CONSTITUTION 11–12.), ezért csak explicit, külön döntéssel nyílik meg, nem egy admin-kapcsolóval.
+
 ## Nyitott, a build során eldöntendő (nem blokkolja a jóváhagyást)
 - SiteContent/Analysis/Message: egy-élő vs. verziózott — alapból egy-élő, felülírással.
-- MyProfile pontos alakja (kulcsolt morzsák vs. dokumentum) — a Fázis 8 tervnél véglegesítjük.
 - A kezdő szegmensek konkrét listája — a te ajánlataidból (később megbeszéljük).

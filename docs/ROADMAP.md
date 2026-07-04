@@ -72,7 +72,7 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
 - **Siker:** minden oldal a v3 oldaltérkép szerint renderel valós adattal, tsc 0 hiba, a teljes
   út (import → feldolgozás → csoportosítás → megírás → átnézés → export) végigjárható a felületen.
 
-### Fázis 8 — Profil + ajánlat admin
+### Fázis 8 — Profil + ajánlat admin ✅
 - MyProfile (mivel foglalkozom / ajánlataim kontextusa) és OfferTemplate szerkesztő UI.
 - **Siker:** felületen szerkeszthető a saját kontextus és a sablonok, a generálás ezt használja.
 
@@ -155,5 +155,13 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   EGY kattintás (nem automata — kredit-kontroll); csoportosítás egy-kattintásos ajánlat (nem automata);
   sötét téma rendszerezve. Lecke: dev-szerver alatt tömeges fájlcsere → `.next` korrupció (500),
   gyógymód: `rm -rf .next` + újraindítás.
-- **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész, a bizonyíték
-  hiányzik), majd Fázis 8 (ajánlat + profil szerkesztés) a `/settings` alá.
+- **Fázis 8 — KÉSZ: Profil + ajánlat admin** (verifikálva valós végpont-hívásokkal: PUT profil-upsert,
+  POST/PATCH ajánlat-sablon, hibás szegmens fail-closed elutasítva, UI in-place szerkesztő kinyílik,
+  tsc 0, konzol 0; a teszt-sorok kitakarítva, éles adat érintetlen). Séma-migráció NEM kellett (a
+  MyProfile/OfferTemplate séma már teljes volt). Logika: `lib/services/settings.ts` (createOfferTemplate,
+  updateOfferTemplate, upsertProfile). Route-ok: `POST /api/offers`, `PATCH /api/offers/[id]`,
+  `PUT /api/profile`. UI: `/settings` OfferEditor (név/törzs/szegmens/aktív + új sablon) + ProfileEditor
+  (kulcsonkénti content + új kulcs). Döntések a `DOMAIN.md`-ben rögzítve (kulcsolt morzsák; nincs kemény
+  törlés → deaktiválás; `offer_mode` szándékosan nincs a UI-n a küldés-biztonság miatt).
+- **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész, a bizonyíték hiányzik
+  — ez a te manuális lépésed: exportált CSV betöltése egy Instantly-fiókba).

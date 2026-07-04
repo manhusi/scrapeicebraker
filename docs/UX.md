@@ -102,6 +102,8 @@ az 1. állomásról indul.
 
 - **Új:** `POST /api/campaigns/from-segment` — kampány létrehozása/kiegészítése egy szegmens
   kampányra váró leadjeivel (a 3. állomás egy-kattintása).
+- **Új (Fázis 8):** `POST /api/offers` + `PATCH /api/offers/[id]` (ajánlat-sablon létrehozás/szerkesztés),
+  `PUT /api/profile` (profil-morzsa upsert kulcs szerint). Logika: `lib/services/settings.ts`.
 - **Törölve (halott, UI nem hívja):** `/api/scrape`, `/api/analyze`, `/api/generate` — a
   `/api/process` és a `/api/campaigns/[id]/generate` fedi le őket. A seed route-ok maradnak (setup-eszközök).
 - Minden más route változatlan.
