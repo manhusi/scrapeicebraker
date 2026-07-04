@@ -16,6 +16,7 @@
 /prisma/*.db
 
 # misc
+.claude/
 .DS_Store
 *.pem
 npm-debug.log*
