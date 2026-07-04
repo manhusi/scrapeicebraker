@@ -14,24 +14,10 @@ export type GenerateResult =
   | { leadId: string; status: "skipped_no_email" }
   | { leadId: string; status: "failed"; reason: string };
 
-// A teljes email összerakása EGY helyen: Szia! + icebreaker + fix törzs (docs/ICEBREAKER.md).
+// A teljes email összerakása EGY helyen: Szia! + icebreaker + közös törzs (docs/ICEBREAKER.md).
+// Az icebreaker le van választva a törzsről: önálló megfigyelés, a törzs pivotál rá ("Amúgy…").
 function assembleFinalMessage(icebreaker: string, body: string): string {
   return `Szia!\n\n${icebreaker.trim()}\n\n${body.trim()}`;
-}
-
-// Védőháló a törzs-szivárgás ellen (ICEBREAKER.md 5.): ha a modell mégis beírta a törzs
-// nyitó fordulatát az icebreaker végére, levágjuk, hogy ne duplázódjon a végső üzenetben.
-function stripLeakedOpening(icebreaker: string, bodyOpening: string): string {
-  const sentinel = bodyOpening.split(":")[0].trim();
-  if (sentinel.length < 6) return icebreaker.trim();
-  const idx = icebreaker.indexOf(sentinel);
-  return (idx === -1 ? icebreaker : icebreaker.slice(0, idx)).trim();
-}
-
-// A sablon-törzs első sora — az icebreakernek ehhez kell átvezetnie (prompts.bodyOpening).
-function templateOpening(body: string): string {
-  const firstLine = body.split("\n").find((l) => l.trim().length > 0) ?? "";
-  return firstLine.trim().slice(0, 160);
 }
 
 // Egy ANALYZED lead üzenet-draftja. Cache: meglévő Message → skip (kivéve force).
@@ -68,14 +54,12 @@ export async function generateMessageForLead(
     ? (lead.analysis.signals as string[])
     : [];
 
-  const bodyOpening = templateOpening(template.body);
   const prompt = buildIcebreakerPrompt({
     businessName: lead.businessName,
     category: lead.category,
     intro: lead.intro,
     summary: lead.analysis.summary,
     signals,
-    bodyOpening,
     voiceOverride: voice?.content ?? null,
   });
 
@@ -90,7 +74,7 @@ export async function generateMessageForLead(
     return { leadId, status: "failed", reason: result.error };
   }
 
-  const icebreaker = stripLeakedOpening(result.data.icebreaker, bodyOpening);
+  const icebreaker = result.data.icebreaker.trim();
   const finalMessage = assembleFinalMessage(icebreaker, template.body);
 
   await prisma.message.upsert({

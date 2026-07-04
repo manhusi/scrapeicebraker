@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { generateJson } from "@/lib/gemini/client";
-import { BOOKING_PAIN_SEGMENTS } from "@/lib/segments/catalog";
 import {
   buildAnalysisPrompt,
   ANALYSIS_SCHEMA,
@@ -86,21 +85,14 @@ export async function analyzeLead(
     },
   });
 
-  // Kvalifikációs kapu (docs/ICEBREAKER.md): a foglalás-fájdalom szegmenseknél az online-foglalós
-  // lead NEM célpont — nekik már megvan, amit az ajánlatunk adna. DISQUALIFIED, de nem vész el.
-  const disqualified =
-    bookingMode === "online" && BOOKING_PAIN_SEGMENTS.has(segmentKey);
-
+  // Egységes ads-horog (docs/ICEBREAKER.md): mindenki célpont, aki hirdet — a bookingMode már NEM
+  // kizáró ok. A mezőt továbbra is eltároljuk metaadatként, de nem hat a státuszra.
   await prisma.lead.update({
     where: { id: leadId },
-    data: { status: disqualified ? "DISQUALIFIED" : "ANALYZED" },
+    data: { status: "ANALYZED" },
   });
 
-  return {
-    leadId,
-    status: disqualified ? "disqualified" : "analyzed",
-    segmentKey,
-  };
+  return { leadId, status: "analyzed", segmentKey };
 }
 
 export type BatchAnalyzeSummary = {

@@ -2,94 +2,74 @@
 
 > A Gemini icebreaker-prompt ebből a dokumentumból származik. Változtatás itt először, aztán a promptban.
 
-## Az üzenet-architektúra (jóváhagyva)
+## Az üzenet-architektúra (v3 — egységes horog, Bálint döntése 2026-07)
 
-Az email egyetlen dolga: **igent kapni egy 2 perces videóra.** A Grand Slam Offer a videóban él, nem az emailben.
-
-```
-Szia!                                      ← fix
-{icebreaker: 1–3 mondat, Gemini}           ← konkrét megfigyelés + átvezetés az admin-fájdalomra
-{sablon-törzs: fix, szegmensenként}        ← megoldás 1 mondatban + proof 1 mondatban + videó CTA
-```
-
-A tárgysort is a Gemini írja (rövid, konkrét, kisbetűs, nem salesy — pl. „kiemelt időszakok foglalása").
-
-## ⚠️ A LEGDRÁGÁBB LECKE (v1 kudarc, 2026-07): ne manufaktúrázz fájdalmat
-
-A v1 prompt KÖTELEZŐVÉ tette, hogy minden icebreaker a „foglalás körüli kézi munkára" vezessen át,
-és odaadta a kész mondatot: *„Gondolom nálatok is megvan a foglalás körüli kézi kör."* Eredmény
-(25 draftból mérve): **19 majdnem szó szerint ezzel zárt.** Ez három sebet ütött:
-- **ok-okozat nélküli ragasztás:** vendég-extra (SUP-ajándék, jakuzzi) + „Gondolom kézi munka" = nonszensz;
-- **ismétlés:** ugyanaz a farok 19×, azonnali lebukás;
-- **HAZUGSÁG:** olyan leadnek is állította a kézi fájdalmat, akinek a saját jeleink szerint MÁR van
-  online foglaló-naptára (Wishkó, StagLand). Pontosan a régi scraper hibája: az ajánlat premisszáját
-  ténynek adta el.
-
-**Alapelv mostantól: az icebreaker MEGFIGYEL, nem feltételez fájdalmat. Ha egy állítás nincs a jelekben,
-NEM mondjuk ki.** A fájdalmat nem az icebreaker gyártja — a KVALIFIKÁCIÓ dönti el (lásd lent), és csak
-a valódi célponthoz megyünk.
-
-## Kvalifikáció — kinek NEM írunk (a truth-first kapu)
-
-Az analízis minden leadre eldönti a `bookingMode`-ot a jelekből: `manual` | `online` | `unknown`.
-- `online` = van működő foglaló-naptár / online fizetés / harmadik feles foglalórendszer
-  (szallas.hu, booking.com, nethotelbooking.net, dátumválasztós ár-naptár).
-- A foglalás-fájdalom szegmenseknél (`booking_lodge`, `service_wellness`, `event_program`) az
-  `online` lead **DISQUALIFIED** — NEM kap üzenetet (a mi ajánlatunk épp az online foglalás; nekik
-  már megvan). Látható „Nem célpont" listában marad, kézzel visszavehető, ha tévedtünk.
-- Így az icebreaker CSAK `manual`/`unknown` leadre fut → az admin-premissza legalább plauzibilis.
-
-## Az icebreaker szabályai
-
-**Mi a jó icebreaker?** Egy mondat, amit CSAK ennek a cégnek lehet elküldeni — mert a saját
-weboldalukról származó konkrétum van benne. A teszt: ha 10 másik cégnek is elmehetne, rossz.
-
-1. **Konkrétum a signals-ból, semmi kitaláció.** Csak olyat állíthat, ami a scrape-elt jelekben
-   tényleg szerepel (házak neve, előleg %, foglalási mód, ár, szolgáltatás). Hallucinált „észrevétel"
-   = azonnali lebukás és bizalomvesztés.
-2. **Megfigyelés, nem bók.** „Feltűnt, hogy a kiemelt időszakokra emailben megy a foglalás" — ez
-   megfigyelés. „Lenyűgöző az oldalatok" — ez üres bók, tilos. Max egy fél-mondatnyi, konkrét,
-   visszafogott dicséret fér bele („a bordó házatok nagyon eltalált"), ha természetes.
-3. **Válaszd a foglaláshoz KÖTHETŐ megfigyelést.** Ha a jelekben van foglalási/fizetési/admin részlet
-   (foglalási mód, előleg %, ár-megjelenítés, elérhetőség kezelése), ARRA építs — mert a fix törzs
-   („Pont ezt szoktam kiütni: …") ezt folytatja. Puszta vendég-extrát (jakuzzi, reggeli) csak akkor
-   emelj ki, ha nincs jobb, és akkor se ragassz rá kézi-munka állítást.
-4. **Az átvezetés IGAZ és VÁLTOZatos — nincs sablonmondat:**
-   - Ha a jelek közt VAN kézi folyamat (emailes/telefonos egyeztetés, utalásos előleg, „kérje
-     kollégáink segítségét", kézi számlázás) → a megfigyelés MAGA ez, természetesen folytatja a törzset.
-   - Ha NINCS ilyen jel → a megfigyelés önmagában áll, VAGY egy könnyed, KONKRÉT-hoz kötött, más-más
-     szóval megfogalmazott feltételezés zárja — sose tényként, sose kétszer ugyanúgy.
-   - **TILOS a „foglalás körüli kézi kör" sablonmondat** (és bármely visszatérő farok). A teszt: ha a
-     záró mondatod egy másik leadre változtatás nélkül elmenne, rossz.
-5. **Ne szivárogtasd a törzset.** Az icebreaker SOHA ne tartalmazza / ne azzal végződjön, hogy
-   „Pont ezt szoktam kiütni:" — az a fix törzs első sora, a rendszer teszi hozzá.
-6. **Hang:** tegeződés, rövid mondatok, emberi. Mintha egy ismerősnek írnád, aki vendégházat visz.
-7. **Tilos (anti-AI):** bók-halmozás; „lenyűgöző / fantasztikus / kiváló"; „nem X, hanem Y"
-   reframe-ek; gondolatjel-lánc; szimmetrikus felsorolások; bármilyen tény, ami nincs a jelekben;
-   kérdéssel kezdés; „remélem jól vagy" típusú töltelék.
-
-## A fix törzs (booking_lodge, v1)
+Az email egyetlen dolga: **igent kapni egy 2 perces videóra (VSL).** A tényleges ajánlat a videóban él.
+Minden lead közös valósága: **Meta-hirdetésre költenek** (a Meta Ads Library-ből gyűjtöttük őket), és
+**jobb megtérülést** akarnak a reklámpénzükből. Ezért EGY közös törzs megy mindenkinek.
 
 ```
-Pont ezt szoktam kiütni: a vendég magától foglal, az előleg azonnal beérkezik Stripe-on,
-a számla magától megy ki. Egy vendégházas ügyfelem gyakorlatilag 0 perc adminnal fut így.
-
-Csináltam róla egy 2 perces videót, hogy ez hogy nézne ki nálatok. Átdobjam?
-
-Ha nem aktuális, az is teljesen oké.
-
-Üdv,
-Bálint
-Az iPhone-omról küldve
+Szia!                                   ← fix
+{icebreaker: 1–2 mondat, Gemini}        ← EGY őszinte, konkrét megfigyelés a cégükről. Semmi más.
+{közös törzs: fix, Bálint írja}         ← puha ads-említés + a videó CTA + Bálint bridge-e
 ```
 
-Miért ilyen: egy fájdalom (kézi admin), egy proof (élő ügyfél — kacatanya-referencia, név nélkül),
-egy mikro-igen CTA (videó, nem meeting), nyomásmentes zárás. Hormozi: az email a videó trailere.
+**A kulcs-váltás: az icebreaker LE VAN VÁLASZTVA a törzsről.** Nem kell fájdalmat hidalnia, nem kell
+átvezetnie semmire — a törzs (a te szöveged, a te „(Remélem nálatok nem így van), de…" bridge-eddel)
+elvégzi az egész ajánlatot. Az icebreakernek EGYETLEN dolga: bebizonyítani, hogy tényleg megnéztem
+őket, és ettől emberi legyen a levél. A törzs első szava (pl. „Amúgy…") pivotál az ajánlatra.
 
-⚠️ **A videó a te feladatod:** vedd fel a ~2 perces booking_lodge videót (Grand Slam Offer: mit kap,
-proof, ingyen demó 1 nap alatt, nulla kockázat), MIELŐTT a kampány kimegy — az email ígéri.
+A tárgysort a Gemini írja (rövid, kisbetűs, a megfigyeléshez kötve — a nyitásért).
+
+## ⚠️ A LEGDRÁGÁBB LECKE (v1 kudarc): ne manufaktúrázz fájdalmat
+
+A v1 prompt kötelezővé tette, hogy minden icebreaker a „foglalás körüli kézi munkára" vezessen át, kész
+sablonmondattal. Eredmény: 25-ből 19 ugyanazzal a farokkal zárt, ok-okozat nélküli ragasztások, és
+olyan leadnek is állította a fájdalmat, akinek nem volt igaz. **Az icebreaker MEGFIGYEL, nem feltételez.
+Ha egy állítás nincs a jelekben, NEM mondjuk ki. Nincs bridge, nincs sales — az a törzs dolga.**
+
+> Kvalifikáció-váltás: a v2-ben az online-foglalós leadet kizártuk (mert az ajánlat az online foglalás
+> volt). Az egységes ads-horognál ez **érvénytelen** — aki hirdet, az célpont, akkor is, ha már online
+> foglal (neki is lehet rossz a landingje/kreatívja). A `bookingMode`-alapú kizárás KIVEZETVE.
+
+## Mi a NAGYON JÓ icebreaker? (ez a rendszer szíve — itt dől el a reply rate)
+
+Egy mondat, amit CSAK ENNEK a cégnek lehet elküldeni, mert olyan konkrétum van benne, amit egy
+ember 20 másodperc alatt talált a weboldalukon — a legjellemzőbb, legérdekesebb részlet.
+
+**A két teszt:**
+1. Ha ez a mondat változtatás nélkül elmenne egy másik hasonló cégnek → ROSSZ.
+2. Ha egy unott gyakornok meg tudná írni pusztán a cég nevéből/nichéből → ROSSZ.
+
+**Szabályok:**
+1. **1–2 rövid mondat, gyakran EGY a legjobb.** Max ~30 szó.
+2. **A LEGJELLEMZŐBB, legspecifikusabb részletet válaszd** — ami megkülönbözteti őket minden más
+   [ugyanolyan] cégtől: nevesített egység („a Kék Kabin"), szokatlan feature („terepjáróval viszitek
+   be a vendégeket a jurtához"), konkrét szám, egy saját mondatuk. **KERÜLD a niche-generikust** (wifi,
+   szauna, dézsa, „szép környezet"), amit minden konkurens is mondhat — kivéve, ha van rajta egyedi csavar.
+3. **Csak tény a jelekből / a bióból.** Semmi kitaláció, semmi hallucináció. Ha kevés az adat, a
+   legkonkrétabb elérhető dolgot mondd, EGY sima mondatban — soha ne tömd ki generikus dicsérettel.
+4. **Tiszta megfigyelés — NULLA sales.** Tilos: ajánlat, kérdés, bármilyen bridge egy problémára,
+   „gondolom nálatok is…", bármi a hirdetésről/marketingről/eredményről. Azt mind a törzs viszi.
+5. **Emberi, nem robot.** Úgy olvasódjon, mint aki tényleg ott járt és megakadt a szeme valamin. Meleg,
+   de nem nyálas. Egy őszinte reakció OK, ha KONKRÉT dologra szól („ezt az üvegfalat eltaláltátok") —
+   de TILOS a generikus bók („szuper oldal", „lenyűgöző", „fantasztikus", bók-halmozás).
+6. **Variáld a nyitást** (Feltűnt / Nézegettem / Láttam / Olvastam / Megakadt a szemem…), ne mindig ugyanaz.
+7. **Tilos (anti-AI):** „nem X, hanem Y"; gondolatjel-lánc; kérdéssel kezdés; „remélem jól vagy" töltelék;
+   felkiáltójel-halom; a törzs megismétlése.
+
+## A közös törzs (Bálint írja)
+
+A törzs a `/settings`-ben szerkeszthető közös ajánlat-sablon (EGY, mindenkinek). Puha, igaz ads-említés
+(„belefutottam a hirdetésetekbe", NEM „a futó hirdetésetek" — hetekkel később lehet, hogy nem fut),
+a te bevált „(Remélem nálatok nem így van), de…" bridge-ed, a videó CTA, nyomásmentes zárás. A törzs
+ígéretét a **VSL** fejti ki (landing kinek, admin-automatizálás kinek). Ez a te szöveged — a rendszer
+csak beilleszti az icebreaker után.
+
+⚠️ **A videó a te feladatod:** vedd fel a ~2 perces VSL-t (mit kap, proof, nulla kockázat), MIELŐTT a
+kampány kimegy — az email erre ígér igent.
 
 ## Mérés (Instantly)
 
-Cél-referencia: a korábbi validált rendszered 10–20% reply rate-et hozott. Ha ez alá megy, előbb az
-icebreaker konkrétságát nézd (1. szabály), csak utána a sablont.
+Cél-referencia: a korábbi validált rendszered 10–20% reply rate. Ha ez alá megy, ELŐBB az icebreaker
+konkrétságát/egyediségét nézd (2. szabály), csak utána a törzset.

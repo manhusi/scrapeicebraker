@@ -36,6 +36,7 @@ async function runPool<T>(
 
 export async function reprocessCampaign(
   campaignId: string,
+  opts: { limit?: number } = {},
 ): Promise<ReprocessSummary> {
   const leads = await prisma.lead.findMany({
     where: {
@@ -44,6 +45,8 @@ export async function reprocessCampaign(
       siteContent: { isNot: null },
     },
     select: { id: true, message: { select: { edited: true } } },
+    orderBy: { createdAt: "asc" },
+    ...(opts.limit ? { take: opts.limit } : {}),
   });
 
   const summary: ReprocessSummary = {

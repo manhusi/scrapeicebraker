@@ -77,18 +77,16 @@ export type IcebreakerInput = {
   intro: string | null;
   summary: string | null;
   signals: string[];
-  // A fix törzs első mondata — az icebreakernek úgy kell végződnie, hogy ez természetesen folytassa.
-  bodyOpening: string;
   // Opcionális hang-útmutató a MyProfile-ból (admin-szerkeszthető); ha nincs, a beépített érvényes.
   voiceOverride?: string | null;
 };
 
-const DEFAULT_VOICE = `Tegeződsz. Rövid, emberi mondatok, mintha egy ismerősödnek írnál, aki vendégházat visz. Nulla korporát duma, nulla nyomulás, nulla túlzás.`;
+const DEFAULT_VOICE = `Tegeződsz. Rövid, emberi mondatok, mintha egy ismerősödnek írnál. Nulla korporát duma, nulla nyomulás, nulla túlzás.`;
 
 export function buildIcebreakerPrompt(input: IcebreakerInput): string {
   const signalList = input.signals.map((s) => `- ${s}`).join("\n");
 
-  return `Cold email NYITÓ SORAIT írod (icebreaker) és egy tárgysort egy magyar kisvállalkozásnak. Az email többi része fix sablon, ami így kezdődik: "${input.bodyOpening}" — a te szövegednek úgy kell végződnie, hogy ez a mondat természetesen folytassa.
+  return `Egy magyar kisvállalkozásnak írt cold email EGYETLEN NYITÓ MONDATÁT írod (icebreaker) és egy tárgysort. Az email ajánlata KÜLÖN, fix törzsben van — te AZZAL NEM foglalkozol. A te dolgod egyetlen dolog: egy őszinte, konkrét megfigyelés a cégükről, ami bebizonyítja, hogy tényleg megnézted őket. Semmi eladás, semmi ajánlat, semmi átvezetés — azt a törzs viszi.
 
 HANG: ${input.voiceOverride?.trim() || DEFAULT_VOICE}
 
@@ -100,23 +98,22 @@ Mivel foglalkoznak: ${input.summary ?? "(nincs)"}
 KONKRÉT JELEK a weboldalukról (CSAK ezekre hivatkozhatsz tényként):
 ${signalList}
 
+KÉT TESZT, amin a mondatodnak át kell mennie:
+- Ha változtatás nélkül elmenne egy másik hasonló cégnek is → ROSSZ, írd újra.
+- Ha egy unott gyakornok meg tudná írni pusztán a cég nevéből → ROSSZ, írd újra.
+
 ICEBREAKER SZABÁLYOK:
-1. 1-3 rövid mondat, ennyi. Egy KONKRÉT megfigyeléssel indít a fenti jelekből (ház neve, előleg %, foglalási mód, ár, szolgáltatás). A teszt: ha a szöveged 10 másik cégnek is elmehetne, rossz.
-2. TILOS bármit állítani, ami nincs a jelek között. Inkább kevesebbet mondj, mint kitalált dolgot. SEMMILYEN fájdalmat/hiányt ne tulajdoníts nekik, ami a jelekből nem olvasható ki tényként.
-3. Ha van rá jel, a foglaláshoz/fizetéshez/adminhoz KÖTHETŐ részletet emelj ki (foglalási mód, előleg %, ár-megjelenítés, elérhetőség), mert a fix törzs ezt folytatja. Puszta vendég-extrát (jakuzzi, reggeli, SUP) csak akkor, ha nincs jobb — és akkor se aggass rá kézi-munka állítást.
-4. Az átvezetés IGAZ és VÁLTOZATOS:
-   - Ha a jelek közt VAN kézi folyamat (emailes/telefonos egyeztetés, utalásos előleg, "kérje kollégáink segítségét", ajánlatkérő űrlap, kézi számlázás): a megfigyelés MAGA ez legyen — így magától folytatja a törzset.
-   - Ha NINCS ilyen jel: a megfigyelés önmagában is megállhat, VAGY egy könnyed, az adott konkrétumhoz kötött, más-más szóval megfogalmazott feltételezéssel zárj — SOSE tényként.
-   - SZIGORÚAN TILOS a "foglalás körüli kézi kör" / "kézi munka" sablonmondat és bármely visszatérő záró fordulat. Ha a záró mondatod változtatás nélkül elmenne egy másik szállásnak is, írd újra.
-5. NE használd és NE ismételd a törzs első sorát. Az icebreakered SOHA ne tartalmazza a(z) "${input.bodyOpening}" szöveget, és ne azzal végződjön — azt a rendszer teszi hozzá.
-6. Megfigyelés, nem bók. "Lenyűgöző/fantasztikus/kiváló" és bók-halmozás tilos. Max egy fél-mondatnyi konkrét, visszafogott dicséret ("a bordó házatok nagyon eltalált"), ha természetes.
-7. Tilos: "nem X, hanem Y" szerkezet; gondolatjel; kérdéssel kezdés; "remélem jól vagy" töltelék; felkiáltójel-halmozás.
-8. NE kommentáld a saját megfigyelésed ("ez nagyon jó/konkrét/hasznos/okos" típusú üres mondat tilos). A megfigyelés önmagában áll, utána jön az átvezetés.
-9. Ne mindig ugyanazzal a szóval kezdd. Variálj természetesen: "Feltűnt, hogy…", "Nézegettem az oldalatokat, és…", "Olvastam, hogy…", "Láttam, hogy…" — mintha tényleg más-más ember oldalát nézted volna végig aznap.
+1. 1-2 rövid mondat, gyakran EGY a legjobb. Max ~30 szó.
+2. A LEGJELLEMZŐBB, legspecifikusabb részletet válaszd a fenti jelekből/bióból — ami megkülönbözteti őket minden más hasonló cégtől: nevesített egység, szokatlan feature, konkrét szám, egy saját mondatuk. KERÜLD a niche-generikust (wifi, szauna, dézsa, "szép környezet", "kikapcsolódás"), amit minden konkurens is mondhat — kivéve ha van rajta egyedi csavar.
+3. Csak tény a jelekből/bióból. Semmi kitaláció. Ha kevés az adat, a legkonkrétabb elérhető dolgot mondd EGY sima mondatban — SOHA ne told ki generikus dicsérettel.
+4. TISZTA MEGFIGYELÉS, NULLA sales. TILOS: ajánlat, kérdés, bármilyen bridge egy problémára/fájdalomra, "gondolom nálatok is…", és bármi a hirdetésről / marketingről / eredményről / foglalási adminról. Azt MIND a törzs viszi, nem te.
+5. Emberi, meleg, de nem nyálas. Egy őszinte reakció OK, ha KONKRÉT dologra szól ("ezt az üvegfalat eltaláltátok"). TILOS a generikus bók: "szuper", "lenyűgöző", "fantasztikus", "gyönyörű oldal", bók-halmozás.
+6. NYITÁS: legtöbbször kezdj KÖZVETLENÜL a konkrétummal, felvezető nélkül (pl. "A panorámás üvegfalatok tényleg eltalált." / "Nálatok a dézsa elektromosan is fűthető, ez ügyes."). A "Megakadt a szemem…" / "Feltűnt, hogy…" / "Nézegettem az oldalatokat…" típusú felvezetőt CSAK RITKÁN használd — sose alapértelmezésként. Cél: ha egymás mellé tennénk 10 leveledet, ne ugyanazzal a szóval induljanak.
+7. Tilos: "nem X, hanem Y"; gondolatjel-lánc; kérdéssel kezdés; "remélem jól vagy" töltelék; felkiáltójel-halom.
 
-TÁRGYSOR SZABÁLYOK: 2-5 szó, kisbetűs, konkrét, a megfigyeléshez kötődik (pl. "kiemelt időszakok foglalása", "a bordó kabin"). Nem salesy, nem clickbait, nincs benne "ajánlat" vagy "lehetőség".
+TÁRGYSOR SZABÁLYOK: 2-5 szó, kisbetűs, a megfigyeléshez kötve (pl. "a kék kabin", "a jurta az erdőben"). Nem salesy, nincs benne "ajánlat" vagy "lehetőség".
 
-Ne köszönj (a "Szia!" fix). Csak az icebreaker szöveget add, a sablon-törzset NE ismételd.`;
+Ne köszönj (a "Szia!" fix). Csak a megfigyelés-mondatot add, semmi mást.`;
 }
 
 export const ICEBREAKER_SCHEMA = {
