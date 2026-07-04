@@ -9,10 +9,18 @@ import {
 export type GenerateResult =
   | { leadId: string; status: "drafted" }
   | { leadId: string; status: "skipped_cached" }
-  | { leadId: string; status: "skipped_no_campaign" }
   | { leadId: string; status: "skipped_no_template" }
   | { leadId: string; status: "skipped_no_email" }
   | { leadId: string; status: "failed"; reason: string };
+
+// A KÖZÖS ajánlat-sablon (UX v4): az egyetlen aktív OfferTemplate. Nincs per-szegmens/kampány
+// választás — mindenki ezt kapja, a törzset a /settings-ben szerkeszted. EGY forrás-igazság.
+export async function getCommonTemplate() {
+  return prisma.offerTemplate.findFirst({
+    where: { active: true },
+    orderBy: { updatedAt: "desc" },
+  });
+}
 
 // A teljes email összerakása EGY helyen: Szia! + icebreaker + közös törzs (docs/ICEBREAKER.md).
 // Az icebreaker le van választva a törzsről: önálló megfigyelés, a törzs pivotál rá ("Amúgy…").
@@ -28,11 +36,7 @@ export async function generateMessageForLead(
 ): Promise<GenerateResult> {
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
-    include: {
-      analysis: true,
-      message: true,
-      campaign: { include: { offerTemplate: true } },
-    },
+    include: { analysis: true, message: true },
   });
 
   if (!lead || !lead.analysis) {
@@ -42,9 +46,8 @@ export async function generateMessageForLead(
   if (!lead.email) return { leadId, status: "skipped_no_email" };
   if (!opts.force && lead.message) return { leadId, status: "skipped_cached" };
 
-  // A generálás a KAMPÁNY ajánlatát használja (nem közvetlenül a szegmenst).
-  if (!lead.campaign) return { leadId, status: "skipped_no_campaign" };
-  const template = lead.campaign.offerTemplate;
+  // Egységes horog (UX v4): mindenki a KÖZÖS sablont kapja.
+  const template = await getCommonTemplate();
   if (!template) return { leadId, status: "skipped_no_template" };
 
   // Hang-útmutató a MyProfile-ból (admin-szerkeszthető, egy forrás-igazság).
@@ -131,20 +134,14 @@ async function runPool<T>(
   await Promise.all(runners);
 }
 
-// Az ANALYZED, kampányba szervezett leadek draftolása, limitálva.
-// Kampányra szűkíthető (campaignId) — a kampány-oldali generáláshoz.
+// Minden ANALYZED + emailes lead draftolása (globálisan, UX v4) — a közös sablonnal.
 export async function generatePendingMessages(opts: {
   limit?: number;
-  campaignId?: string;
 }): Promise<BatchGenerateSummary> {
   const leads = await prisma.lead.findMany({
-    where: {
-      status: "ANALYZED",
-      email: { not: null },
-      campaignId: opts.campaignId ?? { not: null },
-    },
+    where: { status: "ANALYZED", email: { not: null } },
     select: { id: true },
-    take: opts.limit ?? 20,
+    take: opts.limit ?? 50,
     orderBy: { createdAt: "asc" },
   });
 

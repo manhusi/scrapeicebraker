@@ -179,5 +179,17 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   `PUT /api/profile`. UI: `/settings` OfferEditor (név/törzs/szegmens/aktív + új sablon) + ProfileEditor
   (kulcsonkénti content + új kulcs). Döntések a `DOMAIN.md`-ben rögzítve (kulcsolt morzsák; nincs kemény
   törlés → deaktiválás; `offer_mode` szándékosan nincs a UI-n a küldés-biztonság miatt).
-- **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész, a bizonyíték hiányzik
-  — ez a te manuális lépésed: exportált CSV betöltése egy Instantly-fiókba).
+- **Fázis 11 — KÉSZ: Egységes horog, kampány/csoportosítás nélkül** (Bálint döntése). Stratégiaváltás:
+  EGY közös ajánlat mindenkinek (mindenki hirdet → jobb megtérülést akar; a különbség a VSL-ben).
+  Folyam 6→5 állomás: **Behozás → Feldolgozás → Megírás → Átnézés → Küldés** (Csoportosítás ELTŰNT).
+  Minden globális, státusz-alapú: `conveyor.ts` átírva; `generatePendingMessages` + `getReviewQueue` +
+  export globális; közös sablon = az egyetlen aktív `OfferTemplate` (`getCommonTemplate`). Új: `/review`
+  (globális), `/api/write`, `/api/export`, `/api/reprocess` + Beállítások „Draftek frissítése" gomb.
+  Törölve (halott): `services/campaigns.ts`, `exportCampaign.ts`, `reprocessCampaign.ts`,
+  `/api/campaigns/*`, `/campaigns/[id]`, `/review/[campaignId]`, grouping-állomás, GroupButton.
+  A `Campaign` séma megmarad (rollback-barát), de a folyam nem használja. Verifikálva: 6 útvonal 200,
+  home 5 állomás (Csoportosítás=0), kiemelt=Átnézés, `/review` globálisan renderel, tsc 0.
+  ⚠️ NYITOTT (Bálint): a közös törzs megírása a Beállításokban (ads-horog + „(Remélem nálatok nem
+  így van), de…" bridge), majd „Draftek frissítése", és a ~2 perces VSL felvétele.
+- **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész — most már a globális
+  `/api/export` —, a bizonyíték a te manuális lépésed: exportált CSV betöltése egy Instantly-fiókba).

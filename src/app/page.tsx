@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { getConveyor, type StationKey } from "@/lib/services/conveyor";
-import {
-  ProcessButton,
-  GroupButton,
-  WriteButton,
-  TemplatePicker,
-  ExportButton,
-} from "@/app/HomeActions";
+import { ProcessButton, WriteButton, ExportButton } from "@/app/HomeActions";
 
 export const dynamic = "force-dynamic";
 
-// HOME = a futószalag (UX.md v3): 6 állomás fentről le, PONTOSAN EGY kiemelve —
-// a pénzhez legközelebbi teendő. A számokat és a kiemelést a lib/services/conveyor.ts adja.
+// HOME = a futószalag (UX v4): 5 állomás fentről le, PONTOSAN EGY kiemelve — a pénzhez
+// legközelebbi teendő. Nincs kampány, nincs csoportosítás. A számokat a conveyor.ts adja.
 
 function Station({
   n,
@@ -39,9 +33,9 @@ function Station({
 }
 
 export default async function Home() {
-  let conveyor: Awaited<ReturnType<typeof getConveyor>>;
+  let c: Awaited<ReturnType<typeof getConveyor>>;
   try {
-    conveyor = await getConveyor();
+    c = await getConveyor();
   } catch {
     return (
       <main className="page">
@@ -52,18 +46,7 @@ export default async function Home() {
     );
   }
 
-  const c = conveyor;
   const next = (s: StationKey) => c.nextStation === s;
-
-  // Kampány-sorok állomásonként: csak ott jelenik meg egy kampány, ahol teendője van.
-  const writeRows = c.campaigns.filter(
-    (r) => r.writable > 0 || (r.needsTemplate && r.leadCount > 0),
-  );
-  const reviewRows = c.campaigns.filter((r) => r.drafted > 0);
-  const sendRows = c.campaigns.filter((r) => r.approved > 0);
-  const doneRows = c.campaigns.filter(
-    (r) => r.approved === 0 && r.drafted === 0 && r.writable === 0 && r.exported > 0,
-  );
 
   return (
     <main className="page">
@@ -122,147 +105,89 @@ export default async function Home() {
         )}
       </Station>
 
-      {/* 3. Csoportosítás */}
+      {/* 3. Megírás */}
       <Station
         n={3}
-        title="Csoportosítás"
-        isNext={next("group")}
-        isIdle={c.groups.length === 0 && c.disqualified === 0}
+        title="Megírás"
+        isNext={next("write")}
+        isIdle={c.writable === 0}
       >
-        {c.groups.length === 0 ? (
-          <span className="faint" style={{ fontSize: 13, marginLeft: 8 }}>
-            nincs kampányra váró lead
-          </span>
-        ) : (
-          c.groups.map((g) =>
-            g.isUnclear ? (
-              <div className="station-row" key={g.segmentKey}>
-                <span className="muted" style={{ fontSize: 13 }}>
-                  {g.count} · {g.segmentName}
-                </span>
-                <Link href="/leads?status=ANALYZED" className="btn btn-ghost">
-                  Megnézem
-                </Link>
-              </div>
-            ) : (
-              <div className="station-row" key={g.segmentKey}>
-                <span style={{ fontSize: 14 }}>
-                  <strong>{g.count}</strong> · {g.segmentName} — kampányra vár
-                </span>
-                <GroupButton
-                  segmentKey={g.segmentKey}
-                  targetName={g.targetCampaign?.name ?? null}
-                />
-              </div>
-            ),
-          )
-        )}
-        {c.disqualified > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <Link
-              href="/leads?status=DISQUALIFIED"
-              className="faint"
-              style={{ fontSize: 12, textDecoration: "none" }}
-            >
-              {c.disqualified} lead nem célpont (már online foglal) — megnézem
+        {!c.hasCommonTemplate ? (
+          <div className="station-row">
+            <span style={{ color: "var(--warn)", fontSize: 13 }}>
+              Előbb állíts be egy közös ajánlatot a Beállításokban.
+            </span>
+            <Link href="/settings" className="btn btn-ghost">
+              Beállítások
             </Link>
+          </div>
+        ) : c.writable > 0 ? (
+          <div className="station-row">
+            <span className="muted" style={{ fontSize: 13 }}>
+              {c.writable} elemzett lead vár üzenetre (közös ajánlat + személyre szabott icebreaker)
+            </span>
+            <WriteButton count={c.writable} />
+          </div>
+        ) : (
+          <span className="faint" style={{ fontSize: 13, marginLeft: 8 }}>
+            nincs üzenetre váró lead
+          </span>
+        )}
+        {c.noEmail > 0 && (
+          <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>
+            {c.noEmail} elemzett leadnek nincs emailje — ezeknek nem tudunk küldeni
           </div>
         )}
       </Station>
 
-      {/* 4. Megírás */}
+      {/* 4. Átnézés */}
       <Station
         n={4}
-        title="Megírás"
-        isNext={next("write")}
-        isIdle={writeRows.length === 0}
-      >
-        {writeRows.length === 0 ? (
-          <span className="faint" style={{ fontSize: 13, marginLeft: 8 }}>
-            nincs üzenetre váró kampány
-          </span>
-        ) : (
-          writeRows.map((r) => (
-            <div className="station-row" key={r.id}>
-              <span style={{ fontSize: 14 }}>
-                <Link href={`/campaigns/${r.id}`} style={{ color: "var(--text)", fontWeight: 600, textDecoration: "none" }}>
-                  {r.name}
-                </Link>
-                <span className="muted"> · {r.writable} lead vár üzenetre</span>
-              </span>
-              {r.needsTemplate ? (
-                <TemplatePicker campaignId={r.id} templates={c.templates} />
-              ) : (
-                <WriteButton campaignId={r.id} count={r.writable} />
-              )}
-            </div>
-          ))
-        )}
-      </Station>
-
-      {/* 5. Átnézés */}
-      <Station
-        n={5}
         title="Átnézés"
         isNext={next("review")}
-        isIdle={reviewRows.length === 0}
+        isIdle={c.drafted === 0}
       >
-        {reviewRows.length === 0 ? (
+        {c.drafted > 0 ? (
+          <div className="station-row">
+            <span className="muted" style={{ fontSize: 13 }}>
+              {c.drafted} üzenet vár átnézésre
+            </span>
+            <Link href="/review" className="btn btn-purple">
+              Átnézés ({c.drafted})
+            </Link>
+          </div>
+        ) : (
           <span className="faint" style={{ fontSize: 13, marginLeft: 8 }}>
             nincs átnézésre váró üzenet
           </span>
-        ) : (
-          reviewRows.map((r) => (
-            <div className="station-row" key={r.id}>
-              <span style={{ fontSize: 14 }}>
-                <Link href={`/campaigns/${r.id}`} style={{ color: "var(--text)", fontWeight: 600, textDecoration: "none" }}>
-                  {r.name}
-                </Link>
-                <span className="muted">
-                  {" "}· {r.drafted} üzenet vár · {r.approved + r.exported} kész
-                </span>
-              </span>
-              <Link href={`/review/${r.id}`} className="btn btn-purple">
-                Átnézés ({r.drafted})
-              </Link>
-            </div>
-          ))
         )}
       </Station>
 
-      {/* 6. Küldés */}
+      {/* 5. Küldés */}
       <Station
-        n={6}
+        n={5}
         title="Küldés"
         isNext={next("send")}
-        isIdle={sendRows.length === 0 && doneRows.length === 0}
+        isIdle={c.approved === 0 && c.exported === 0}
       >
-        {sendRows.length === 0 && doneRows.length === 0 ? (
+        {c.approved > 0 ? (
+          <div className="station-row">
+            <span className="muted" style={{ fontSize: 13 }}>
+              {c.approved} jóváhagyott üzenet kész az exportra
+            </span>
+            <ExportButton redownload={false} />
+          </div>
+        ) : c.exported > 0 ? (
+          <div className="station-row">
+            <span className="muted" style={{ fontSize: 13 }}>
+              {c.exported} üzenet exportálva ✓
+            </span>
+            <ExportButton redownload />
+          </div>
+        ) : (
           <span className="faint" style={{ fontSize: 13, marginLeft: 8 }}>
             nincs küldésre kész üzenet
           </span>
-        ) : (
-          <>
-            {sendRows.map((r) => (
-              <div className="station-row" key={r.id}>
-                <span style={{ fontSize: 14 }}>
-                  <Link href={`/campaigns/${r.id}`} style={{ color: "var(--text)", fontWeight: 600, textDecoration: "none" }}>
-                    {r.name}
-                  </Link>
-                  <span className="muted"> · {r.approved} jóváhagyott üzenet kész</span>
-                </span>
-                <ExportButton campaignId={r.id} redownload={false} />
-              </div>
-            ))}
-            {doneRows.map((r) => (
-              <div className="station-row" key={r.id}>
-                <span className="muted" style={{ fontSize: 13 }}>
-                  {r.name} · {r.exported} üzenet exportálva ✓
-                </span>
-                <ExportButton campaignId={r.id} redownload />
-              </div>
-            ))}
-          </>
         )}
       </Station>
     </main>

@@ -1,6 +1,6 @@
 "use client";
 
-// A futószalag-állomások kliens-akciói. Minden gomb az ui/api.ts-en át hív (EGY forrás-igazság).
+// A futószalag-állomások kliens-akciói (UX v4, globális). Minden gomb az ui/api.ts-en át hív.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,7 +29,7 @@ function Note({ msg }: { msg: string | null }) {
   return <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>{msg}</div>;
 }
 
-// 2. állomás: beolvasás + elemzés egy láncban.
+// 2. állomás: beolvasás + elemzés egy láncban (adagolva; ha marad, jelezzük).
 export function ProcessButton({ count }: { count: number }) {
   const { busy, msg, run } = useAction();
 
@@ -40,20 +40,16 @@ export function ProcessButton({ count }: { count: number }) {
         disabled={busy}
         onClick={() =>
           run(async () => {
-            const limit = 100;
             const r = await apiCall<{
-              summary: { scraped: number; analyzed: number; scrapeFailed: number };
-            }>("/api/process", { body: { limit } });
+              summary: { scraped: number; analyzed: number };
+            }>("/api/process", { body: { limit: 100 } });
             if (!r.ok) return `Hiba: ${r.error}`;
-            
-            const processedCount = Math.max(r.summary.scraped, r.summary.analyzed);
-            const remaining = count - processedCount;
-            
-            // Ha maradt még feldolgozatlan lead, jelezzük a felhasználónak
-            if (remaining > 0) {
-              return `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve. Még maradt ${remaining} feldolgozatlan lead, kattints újra a következő adagért!`;
-            }
-            return `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve.`;
+            const processed = Math.max(r.summary.scraped, r.summary.analyzed);
+            const remaining = count - processed;
+            const base = `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve.`;
+            return remaining > 0
+              ? `${base} Még ${remaining} vár — kattints újra a következő adagért.`
+              : base;
           }, "Feldolgozás fut… (1-2 perc)")
         }
       >
@@ -64,48 +60,8 @@ export function ProcessButton({ count }: { count: number }) {
   );
 }
 
-// 3. állomás: egy szegmens-csoport kampányba egy kattintással.
-export function GroupButton({
-  segmentKey,
-  targetName,
-}: {
-  segmentKey: string;
-  targetName: string | null;
-}) {
-  const { busy, msg, run } = useAction();
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-      <Button
-        variant="primary"
-        disabled={busy}
-        onClick={() =>
-          run(async () => {
-            const r = await apiCall<{ campaignName: string; added: number; created: boolean }>(
-              "/api/campaigns/from-segment",
-              { body: { segmentKey } },
-            );
-            return r.ok
-              ? `${r.added} lead a(z) „${r.campaignName}” kampányban${r.created ? " (új kampány)" : ""}.`
-              : `Hiba: ${r.error}`;
-          })
-        }
-      >
-        {targetName ? `→ ${targetName}` : "Új kampányba"}
-      </Button>
-      <Note msg={msg} />
-    </div>
-  );
-}
-
-// 4. állomás: üzenetek megírása egy kampányban.
-export function WriteButton({
-  campaignId,
-  count,
-}: {
-  campaignId: string;
-  count: number;
-}) {
+// 3. állomás: minden elemzett + emailes lead megírása a közös sablonnal (adagolva).
+export function WriteButton({ count }: { count: number }) {
   const { busy, msg, run } = useAction();
 
   return (
@@ -115,13 +71,16 @@ export function WriteButton({
         disabled={busy}
         onClick={() =>
           run(async () => {
-            const r = await apiCall<{ summary: { drafted: number } }>(
-              `/api/campaigns/${campaignId}/generate`,
-            );
-            return r.ok
-              ? `Kész: ${r.summary.drafted} üzenet megírva.`
-              : `Hiba: ${r.error}`;
-          }, "Megírás folyamatban… (eltarthat 1-2 percig)")
+            const r = await apiCall<{ summary: { drafted: number } }>("/api/write", {
+              body: { limit: 100 },
+            });
+            if (!r.ok) return `Hiba: ${r.error}`;
+            const remaining = count - r.summary.drafted;
+            const base = `Kész: ${r.summary.drafted} üzenet megírva.`;
+            return remaining > 0
+              ? `${base} Még ${remaining} vár — kattints újra.`
+              : base;
+          }, "Megírás folyamatban… (eltarthat pár percig)")
         }
       >
         {busy ? "Megírás…" : `Megírás (${count})`}
@@ -131,59 +90,8 @@ export function WriteButton({
   );
 }
 
-// 4. állomás kivétele: ajánlat nélküli kampány — inline választó, hogy ne legyen zsákutca.
-export function TemplatePicker({
-  campaignId,
-  templates,
-}: {
-  campaignId: string;
-  templates: { id: string; name: string }[];
-}) {
-  const { busy, msg, run } = useAction();
-  const [templateId, setTemplateId] = useState("");
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <select
-        className="select"
-        value={templateId}
-        onChange={(e) => setTemplateId(e.target.value)}
-      >
-        <option value="">— válassz ajánlatot —</option>
-        {templates.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
-      <Button
-        variant="primary"
-        disabled={busy || !templateId}
-        onClick={() =>
-          run(async () => {
-            const r = await apiCall(`/api/campaigns/${campaignId}`, {
-              method: "PATCH",
-              body: { offerTemplateId: templateId },
-            });
-            return r.ok ? null : `Hiba: ${r.error}`;
-          })
-        }
-      >
-        Beállítás
-      </Button>
-      <Note msg={msg} />
-    </div>
-  );
-}
-
-// 6. állomás: Instantly CSV letöltése.
-export function ExportButton({
-  campaignId,
-  redownload,
-}: {
-  campaignId: string;
-  redownload: boolean;
-}) {
+// 5. állomás: globális Instantly CSV letöltése (minden jóváhagyott).
+export function ExportButton({ redownload }: { redownload: boolean }) {
   const { busy, msg, run } = useAction();
 
   return (
@@ -194,8 +102,7 @@ export function ExportButton({
         onClick={() =>
           run(async () => {
             const r = await apiCall<{ csv: string; filename: string; count: number }>(
-              `/api/campaigns/${campaignId}/export`,
-              { body: { onlyApproved: !redownload } },
+              "/api/export",
             );
             if (!r.ok) return `Hiba: ${r.error}`;
             const blob = new Blob([r.csv], { type: "text/csv;charset=utf-8;" });

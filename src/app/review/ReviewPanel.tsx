@@ -1,15 +1,13 @@
 "use client";
 
-// Az üzenet-szerkesztés EGYETLEN felülete (UX.md v3). Jóváhagyás után automatikusan
+// Az üzenet-szerkesztés EGYETLEN felülete (UX v4, globális). Jóváhagyás után automatikusan
 // a következő átnézésre váró üzenetre lép.
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Button from "@/app/ui/Button";
 import { apiCall } from "@/app/ui/api";
 
 type Props = {
-  campaignId: string;
   leadId: string;
   subject: string;
   finalMessage: string;
@@ -19,7 +17,6 @@ type Props = {
 };
 
 export default function ReviewPanel(p: Props) {
-  const router = useRouter();
   const [subject, setSubject] = useState(p.subject);
   const [finalMessage, setFinalMessage] = useState(p.finalMessage);
   const [busy, setBusy] = useState(false);
@@ -28,11 +25,9 @@ export default function ReviewPanel(p: Props) {
   const readOnly = p.messageStatus === "EXPORTED";
 
   function goNext() {
-    if (p.nextDraftedId) {
-      window.location.href = `/review/${p.campaignId}?lead=${p.nextDraftedId}`;
-    } else {
-      window.location.href = `/review/${p.campaignId}`;
-    }
+    window.location.href = p.nextDraftedId
+      ? `/review?lead=${p.nextDraftedId}`
+      : `/review`;
   }
 
   async function approve() {

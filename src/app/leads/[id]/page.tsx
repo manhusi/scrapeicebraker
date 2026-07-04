@@ -25,7 +25,7 @@ export default async function LeadPage({
   const { id } = await params;
   const lead = await prisma.lead.findUnique({
     where: { id },
-    include: { siteContent: true, analysis: true, message: true, campaign: true },
+    include: { siteContent: true, analysis: true, message: true },
   });
   if (!lead) notFound();
 
@@ -39,11 +39,8 @@ export default async function LeadPage({
 
   return (
     <main className="page">
-      <Link
-        href={lead.campaignId ? `/campaigns/${lead.campaignId}` : "/leads"}
-        style={{ textDecoration: "none" }}
-      >
-        ← {lead.campaign ? lead.campaign.name : "Leadek"}
+      <Link href="/leads" style={{ textDecoration: "none" }}>
+        ← Leadek
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
@@ -70,7 +67,6 @@ export default async function LeadPage({
           <Field k="Kategória" v={lead.category} />
           <Field k="Követők" v={lead.followers?.toLocaleString("hu-HU") ?? null} />
           <Field k="Kulcsszó" v={lead.sourceKeyword} />
-          <Field k="Kampány" v={lead.campaign?.name ?? null} />
           <Field k="Telefon" v={lead.phone} />
           <Field k="Cím" v={lead.address} />
         </div>
@@ -108,11 +104,9 @@ export default async function LeadPage({
         <div className="card" style={{ marginTop: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <h2 style={{ fontSize: 16, margin: 0 }}>Üzenet</h2>
-            {lead.campaignId && (
-              <Link href={`/review/${lead.campaignId}?lead=${lead.id}`} className="btn btn-purple">
-                Átnézés megnyitása
-              </Link>
-            )}
+            <Link href={`/review?lead=${lead.id}`} className="btn btn-purple">
+              Átnézés megnyitása
+            </Link>
           </div>
           {lead.message.subject && (
             <p style={{ fontSize: 14, marginBottom: 6 }}>

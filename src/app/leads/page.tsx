@@ -38,7 +38,6 @@ export default async function LeadsPage({
         category: true,
         status: true,
         analysis: { select: { segmentKey: true } },
-        campaign: { select: { id: true, name: true } },
       },
     }),
     prisma.segment.findMany({ select: { key: true, name: true } }),
@@ -94,7 +93,6 @@ export default async function LeadsPage({
             <tr>
               <th>Cég</th>
               <th>Szegmens</th>
-              <th>Kampány</th>
               <th>Állapot</th>
             </tr>
           </thead>
@@ -116,15 +114,6 @@ export default async function LeadsPage({
                   {l.analysis?.segmentKey
                     ? segmentName.get(l.analysis.segmentKey) ?? l.analysis.segmentKey
                     : "—"}
-                </td>
-                <td className="muted">
-                  {l.campaign ? (
-                    <Link href={`/campaigns/${l.campaign.id}`} style={{ textDecoration: "none" }}>
-                      {l.campaign.name}
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
                 </td>
                 <td>
                   <Badge status={l.status} />

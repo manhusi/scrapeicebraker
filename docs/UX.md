@@ -1,8 +1,33 @@
-# UX v3 — „Futószalag" (a felület forrás-igazsága)
+# UX v4 — „Futószalag", kampány nélkül (a felület forrás-igazsága)
 
 > Minden UI-döntés ehhez igazodik. A mérce: „ránézel, és tudod, hol tartasz és mi az egyetlen
-> következő lépés." Ez a v3 a v2 (kampány-központú home) teljes leváltása — Bálint döntése
-> (2026-07-04): a régi UI-ból semmi nem marad.
+> következő lépés."
+
+## v4 — Egységes horog, kampány/csoportosítás nélkül (Bálint döntése, 2026-07)
+
+Stratégiaváltás: EGY közös ajánlat mindenkinek (mindenki hirdet → jobb megtérülést akar; a különbség
+a VSL-ben dől el — lásd `ICEBREAKER.md`). Ezért **nincs többé csoportosítás és nincs kampány**. A lead
+csak a STÁTUSZÁN megy végig, globálisan:
+
+**Behozás → Feldolgozás → Megírás → Átnézés → Küldés** (5 állomás, a Csoportosítás ELTŰNT).
+
+- **Közös ajánlat-sablon:** az EGYETLEN aktív `OfferTemplate` (a `/settings`-ben szerkeszted). A
+  megírás mindenkinek ezt használja — nincs per-szegmens sablon-választás.
+- **Megírás:** minden `ANALYZED` + emailes lead (globálisan) egy gombbal → közös sablon + személyre
+  szabott icebreaker.
+- **Átnézés:** minden `DRAFTED` lead, EGY globális `/review` sor (prev/next az egészen).
+- **Küldés:** minden `APPROVED` lead → EGY közös Instantly CSV (`/api/export`).
+- A `Campaign` séma megmarad (rollback-barát), de a folyam NEM használja. A szegmens-elemzés marad,
+  csak az icebreaker személyre szabásához (nem vezérel sablont/kampányt).
+- A `bookingMode`-alapú DISQUALIFIED kivezetve (aki hirdet, célpont).
+
+Az alábbi v3-leírás a kampányos részeknél elavult; a folyam-igazság a fenti v4.
+
+---
+
+# UX v3 — „Futószalag" (történeti)
+
+> A v2 (kampány-központú home) leváltása volt — Bálint döntése (2026-07-04).
 
 ## Miért v3 (a v2 tanulságai — ezeket nem ismételjük meg)
 

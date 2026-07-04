@@ -1,36 +1,14 @@
 import { prisma } from "@/lib/db";
 
-// A futószalag (home) EGY forrás-igazsága (UX.md v3): állomás-számok, kampány-sorok,
-// szegmens-csoportok és a kiemelt következő állomás mind innen jön.
+// A futószalag (home) EGY forrás-igazsága (UX v4): tisztán STÁTUSZ-alapú, globális számok.
+// Nincs kampány, nincs csoportosítás — a lead csak az útján megy végig.
 
 export type StationKey =
   | "import"
   | "process"
-  | "group"
   | "write"
   | "review"
   | "send";
-
-export type SegmentGroup = {
-  segmentKey: string;
-  segmentName: string; // ember-nyelvű név (Segment.name) — a felület CSAK ezt mutatja
-  count: number;
-  // Egy kattintás célja: meglévő illő aktív kampány, vagy null → új kampány készül
-  targetCampaign: { id: string; name: string } | null;
-  isUnclear: boolean; // fail-closed szegmens: kézi átnézés, nem kampány
-};
-
-export type CampaignRow = {
-  id: string;
-  name: string;
-  templateName: string | null;
-  needsTemplate: boolean;
-  leadCount: number;
-  writable: number; // üzenetre váró (elemzett + van email)
-  drafted: number; // átnézésre váró
-  approved: number; // küldésre kész
-  exported: number;
-};
 
 export type Conveyor = {
   totalLeads: number;
@@ -38,10 +16,12 @@ export type Conveyor = {
   processable: number; // új, beolvasásra váró (van weboldala)
   noWebsite: number; // új, de weboldal nélkül — sosem lesz feldolgozható
   failed: number; // beolvasás/elemzés hiba
-  disqualified: number; // elemezve, de nem célpont (pl. már online foglal)
-  groups: SegmentGroup[];
-  campaigns: CampaignRow[];
-  templates: { id: string; name: string; segmentKey: string }[]; // inline ajánlat-választóhoz
+  writable: number; // ANALYZED + van email → megírható
+  noEmail: number; // ANALYZED, de nincs email → nem küldhető
+  drafted: number; // átnézésre vár
+  approved: number; // küldésre kész
+  exported: number; // már exportálva
+  hasCommonTemplate: boolean; // van-e aktív közös ajánlat-sablon
   nextStation: StationKey;
 };
 
@@ -52,11 +32,12 @@ export async function getConveyor(): Promise<Conveyor> {
     processable,
     noWebsite,
     failed,
-    disqualified,
-    unassigned,
-    segments,
-    campaigns,
-    templates,
+    writable,
+    noEmail,
+    drafted,
+    approved,
+    exported,
+    template,
   ] = await Promise.all([
     prisma.lead.count(),
     prisma.importBatch.findFirst({ orderBy: { createdAt: "desc" } }),
@@ -65,84 +46,22 @@ export async function getConveyor(): Promise<Conveyor> {
     prisma.lead.count({
       where: { status: { in: ["SCRAPE_FAILED", "ANALYZE_FAILED"] } },
     }),
-    prisma.lead.count({ where: { status: "DISQUALIFIED" } }),
-    prisma.lead.findMany({
-      where: { status: "ANALYZED", campaignId: null },
-      select: { analysis: { select: { segmentKey: true } } },
-    }),
-    prisma.segment.findMany({ select: { key: true, name: true } }),
-    prisma.campaign.findMany({
-      where: { status: { in: ["DRAFT", "READY", "EXPORTED"] } },
-      orderBy: { createdAt: "asc" },
-      include: { offerTemplate: { select: { name: true, segmentKey: true } } },
-    }),
-    prisma.offerTemplate.findMany({
-      where: { active: true },
-      select: { id: true, name: true, segmentKey: true },
-      orderBy: { segmentKey: "asc" },
-    }),
+    prisma.lead.count({ where: { status: "ANALYZED", email: { not: null } } }),
+    prisma.lead.count({ where: { status: "ANALYZED", email: null } }),
+    prisma.lead.count({ where: { status: "DRAFTED" } }),
+    prisma.lead.count({ where: { status: "APPROVED" } }),
+    prisma.lead.count({ where: { status: "EXPORTED" } }),
+    prisma.offerTemplate.findFirst({ where: { active: true }, select: { id: true } }),
   ]);
 
-  const segmentName = new Map(segments.map((s) => [s.key, s.name]));
-
-  // Kampányra váró csoportok szegmensenként.
-  const bySegment = new Map<string, number>();
-  for (const l of unassigned) {
-    const key = l.analysis?.segmentKey ?? "unclear";
-    bySegment.set(key, (bySegment.get(key) ?? 0) + 1);
-  }
-  const groups: SegmentGroup[] = [...bySegment.entries()]
-    .map(([key, count]) => {
-      const target = campaigns.find(
-        (c) =>
-          c.status !== "EXPORTED" && c.offerTemplate?.segmentKey === key,
-      );
-      return {
-        segmentKey: key,
-        segmentName: segmentName.get(key) ?? key,
-        count,
-        targetCampaign: target ? { id: target.id, name: target.name } : null,
-        isUnclear: key === "unclear",
-      };
-    })
-    .sort((a, b) => b.count - a.count);
-
-  // Kampány-sorok a 4–6. állomáshoz.
-  const rows: CampaignRow[] = await Promise.all(
-    campaigns.map(async (c) => {
-      const [writable, drafted, approved, exported, leadCount] =
-        await Promise.all([
-          prisma.lead.count({
-            where: { campaignId: c.id, status: "ANALYZED", email: { not: null } },
-          }),
-          prisma.lead.count({ where: { campaignId: c.id, status: "DRAFTED" } }),
-          prisma.lead.count({ where: { campaignId: c.id, status: "APPROVED" } }),
-          prisma.lead.count({ where: { campaignId: c.id, status: "EXPORTED" } }),
-          prisma.lead.count({ where: { campaignId: c.id } }),
-        ]);
-      return {
-        id: c.id,
-        name: c.name,
-        templateName: c.offerTemplate?.name ?? null,
-        needsTemplate: !c.offerTemplateId,
-        leadCount,
-        writable,
-        drafted,
-        approved,
-        exported,
-      };
-    }),
-  );
-
   // A kiemelt állomás: a pénzhez legközelebbi teendő (áramlás-vég felől visszafelé).
-  const nextStation: StationKey = rows.some((r) => r.approved > 0)
-    ? "send"
-    : rows.some((r) => r.drafted > 0)
-      ? "review"
-      : rows.some((r) => r.writable > 0)
-        ? "write"
-        : groups.some((g) => !g.isUnclear)
-          ? "group"
+  const nextStation: StationKey =
+    approved > 0
+      ? "send"
+      : drafted > 0
+        ? "review"
+        : writable > 0
+          ? "write"
           : processable > 0
             ? "process"
             : "import";
@@ -159,10 +78,12 @@ export async function getConveyor(): Promise<Conveyor> {
     processable,
     noWebsite,
     failed,
-    disqualified,
-    groups,
-    campaigns: rows,
-    templates,
+    writable,
+    noEmail,
+    drafted,
+    approved,
+    exported,
+    hasCommonTemplate: Boolean(template),
     nextStation,
   };
 }

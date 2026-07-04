@@ -3,6 +3,7 @@ import { listKeywordsWithCounts } from "@/lib/services/keywords";
 import KeywordManager, { type KeywordRow } from "./KeywordManager";
 import OfferEditor, { type OfferRow } from "./OfferEditor";
 import ProfileEditor, { type ProfileRow } from "./ProfileEditor";
+import ReprocessButton from "./ReprocessButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +51,15 @@ export default async function SettingsPage() {
       </section>
 
       <section className="card" style={{ marginTop: 16 }}>
-        <h2 style={{ fontSize: 16, marginTop: 0 }}>Ajánlatok</h2>
+        <h2 style={{ fontSize: 16, marginTop: 0 }}>Közös ajánlat (a levél törzse)</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-          A kampányok üzeneteinek törzse (icebreaker után). A deaktivált sablon nem választható újhoz.
+          EGY közös törzs megy mindenkinek, az icebreaker után. Itt szerkeszted. Ha módosítod,
+          a lenti gombbal frissítsd a még nem küldött drafteket.
         </p>
         <OfferEditor offers={offerRows} segments={segments} />
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+          <ReprocessButton />
+        </div>
       </section>
 
       <section className="card" style={{ marginTop: 16 }}>
