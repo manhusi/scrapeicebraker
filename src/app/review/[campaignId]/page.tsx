@@ -120,6 +120,7 @@ export default async function ReviewPage({
         {/* Középen: az üzenet */}
         <div className="card">
           <ReviewPanel
+            key={current.id}
             campaignId={campaignId}
             leadId={current.id}
             subject={current.message!.subject ?? ""}
