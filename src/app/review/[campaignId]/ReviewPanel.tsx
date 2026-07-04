@@ -29,11 +29,10 @@ export default function ReviewPanel(p: Props) {
 
   function goNext() {
     if (p.nextDraftedId) {
-      router.push(`/review/${p.campaignId}?lead=${p.nextDraftedId}`);
+      window.location.href = `/review/${p.campaignId}?lead=${p.nextDraftedId}`;
     } else {
-      router.push(`/review/${p.campaignId}`);
+      window.location.href = `/review/${p.campaignId}`;
     }
-    router.refresh();
   }
 
   async function approve() {
@@ -57,7 +56,7 @@ export default function ReviewPanel(p: Props) {
     });
     setBusy(false);
     setMsg(r.ok ? "Mentve." : `Hiba: ${r.error}`);
-    if (r.ok) router.refresh();
+    if (r.ok) window.location.reload();
   }
 
   async function unapprove() {
@@ -68,7 +67,7 @@ export default function ReviewPanel(p: Props) {
     });
     setBusy(false);
     setMsg(r.ok ? "Visszatéve átnézésre." : `Hiba: ${r.error}`);
-    if (r.ok) router.refresh();
+    if (r.ok) window.location.reload();
   }
 
   async function regenerate() {
@@ -77,7 +76,7 @@ export default function ReviewPanel(p: Props) {
     const r = await apiCall(`/api/messages/${p.leadId}/regenerate`);
     setBusy(false);
     setMsg(r.ok ? "Újraírva." : `Hiba: ${r.error}`);
-    if (r.ok) router.refresh();
+    if (r.ok) window.location.reload();
   }
 
   const dirty = subject !== p.subject || finalMessage !== p.finalMessage;
