@@ -40,12 +40,20 @@ export function ProcessButton({ count }: { count: number }) {
         disabled={busy}
         onClick={() =>
           run(async () => {
+            const limit = 100;
             const r = await apiCall<{
               summary: { scraped: number; analyzed: number; scrapeFailed: number };
-            }>("/api/process", { body: { limit: 50 } });
-            return r.ok
-              ? `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve.`
-              : `Hiba: ${r.error}`;
+            }>("/api/process", { body: { limit } });
+            if (!r.ok) return `Hiba: ${r.error}`;
+            
+            const processedCount = Math.max(r.summary.scraped, r.summary.analyzed);
+            const remaining = count - processedCount;
+            
+            // Ha maradt még feldolgozatlan lead, jelezzük a felhasználónak
+            if (remaining > 0) {
+              return `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve. Még maradt ${remaining} feldolgozatlan lead, kattints újra a következő adagért!`;
+            }
+            return `Kész: ${r.summary.scraped} beolvasva, ${r.summary.analyzed} elemezve.`;
           }, "Feldolgozás fut… (1-2 perc)")
         }
       >
@@ -187,6 +195,7 @@ export function ExportButton({
           run(async () => {
             const r = await apiCall<{ csv: string; filename: string; count: number }>(
               `/api/campaigns/${campaignId}/export`,
+              { body: { onlyApproved: !redownload } },
             );
             if (!r.ok) return `Hiba: ${r.error}`;
             const blob = new Blob([r.csv], { type: "text/csv;charset=utf-8;" });

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { MessageStatus } from "@prisma/client";
 
 // Instantly-kompatibilis CSV export EGY kampányból (az APPROVED üzenetekből).
 // Oszlopok: email + custom változók, amikre az Instantly szekvenciában {{...}}-ként hivatkozol.
@@ -23,14 +24,21 @@ function slug(name: string): string {
 
 export type ExportResult = { csv: string; filename: string; count: number };
 
-export async function exportCampaign(campaignId: string): Promise<ExportResult> {
+export async function exportCampaign(
+  campaignId: string,
+  onlyApproved = false,
+): Promise<ExportResult> {
+  const messageStatuses: MessageStatus[] = onlyApproved
+    ? ["APPROVED"]
+    : ["APPROVED", "EXPORTED"];
+
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     include: {
       leads: {
         where: {
           email: { not: null },
-          message: { status: { in: ["APPROVED", "EXPORTED"] } },
+          message: { status: { in: messageStatuses } },
         },
         include: { message: true },
         orderBy: { businessName: "asc" },
