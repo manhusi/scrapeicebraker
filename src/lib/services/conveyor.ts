@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getCommonTemplate } from "@/lib/services/settings";
 
 // A futószalag (home) EGY forrás-igazsága (UX v4): tisztán STÁTUSZ-alapú, globális számok.
 // Nincs kampány, nincs csoportosítás — a lead csak az útján megy végig.
@@ -51,7 +52,7 @@ export async function getConveyor(): Promise<Conveyor> {
     prisma.lead.count({ where: { status: "DRAFTED" } }),
     prisma.lead.count({ where: { status: "APPROVED" } }),
     prisma.lead.count({ where: { status: "EXPORTED" } }),
-    prisma.offerTemplate.findFirst({ where: { active: true }, select: { id: true } }),
+    getCommonTemplate(),
   ]);
 
   // A kiemelt állomás: a pénzhez legközelebbi teendő (áramlás-vég felől visszafelé).

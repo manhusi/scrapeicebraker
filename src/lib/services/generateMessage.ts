@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { generateJson } from "@/lib/gemini/client";
+import { getCommonTemplate } from "@/lib/services/settings";
 import {
   buildIcebreakerPrompt,
   ICEBREAKER_SCHEMA,
@@ -13,14 +14,8 @@ export type GenerateResult =
   | { leadId: string; status: "skipped_no_email" }
   | { leadId: string; status: "failed"; reason: string };
 
-// A KÖZÖS ajánlat-sablon (UX v4): az egyetlen aktív OfferTemplate. Nincs per-szegmens/kampány
-// választás — mindenki ezt kapja, a törzset a /settings-ben szerkeszted. EGY forrás-igazság.
-export async function getCommonTemplate() {
-  return prisma.offerTemplate.findFirst({
-    where: { active: true },
-    orderBy: { updatedAt: "desc" },
-  });
-}
+// A KÖZÖS ajánlat-sablon EGY forrás-igazsága a settings.ts-ben él (getCommonTemplate) —
+// mindenki azt kapja, a törzset a /settings-ben szerkeszted.
 
 // A teljes email összerakása EGY helyen: Szia! + icebreaker + közös törzs (docs/ICEBREAKER.md).
 // Az icebreaker le van választva a törzsről: önálló megfigyelés, a törzs pivotál rá ("Amúgy…").

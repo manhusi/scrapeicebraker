@@ -17,7 +17,6 @@ export default function TopNav() {
     if (href === "/")
       return (
         pathname === "/" ||
-        pathname.startsWith("/campaigns") ||
         pathname.startsWith("/review") ||
         pathname.startsWith("/import")
       );

@@ -191,5 +191,19 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   home 5 állomás (Csoportosítás=0), kiemelt=Átnézés, `/review` globálisan renderel, tsc 0.
   ⚠️ NYITOTT (Bálint): a közös törzs megírása a Beállításokban (ads-horog + „(Remélem nálatok nem
   így van), de…" bridge), majd „Draftek frissítése", és a ~2 perces VSL felvétele.
+- **Fázis 11c — KÉSZ: Beállítások igazítva az egységes horoghoz** (verifikálva: tsc 0, 5 útvonal 200,
+  0 szerver/konzol hiba). A „Közös ajánlat" szerkesztő a Fázis 11 előtti multi-sablon + per-szegmens
+  fejjel gondolkodott (több aktív sablon lehetett → `getCommonTemplate` némán a legutóbb módosítottat
+  vitte; szegmens-választó, ami a modellben halott). Javítás: (1) `saveCommonBody` a settings.ts-ben
+  tranzakcióban KIKÉNYSZERÍTI a „pontosan egy aktív" invariánst (a többit deaktiválja) — verifikálva
+  valós kódúton: 2 aktívra állítva → PUT → 1 aktív, a valósat célozta, törzs változatlan, temp
+  deaktiválva, éles adat visszaállt; (2) `getCommonTemplate` EGY forrás-igazságba került (settings.ts),
+  a generateMessage ÉS a conveyor onnan importál (megszűnt 2 duplikált lekérdezés); (3) UI: `OfferEditor`
+  (lista/szegmens/aktiválás) → `CommonOfferEditor` (egyetlen törzs-textarea + Mentés); (4) új
+  `PUT /api/offers/common`, törölve a halott `POST /api/offers` + `PATCH /api/offers/[id]` +
+  `createOfferTemplate`/`updateOfferTemplate`. Elavult feliratok javítva: import CTA „→ Futószalag"
+  (volt „(csoportosítás)"), TopNav isActive már nem figyeli a megszűnt `/campaigns`-t. A séma és a régi
+  sablonok érintetlenek (rollback-barát); `OfferTemplate.segmentKey` séma-kötelező marad, de a UI nem
+  kezeli (üres-DB edge-case: az első szegmenst kapja technikai értékként).
 - **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész — most már a globális
   `/api/export` —, a bizonyíték a te manuális lépésed: exportált CSV betöltése egy Instantly-fiókba).

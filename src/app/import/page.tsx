@@ -597,7 +597,7 @@ export default function ImportPage() {
             )}
           </ul>
           <Link href="/" className="btn btn-primary" style={{ marginTop: 16 }}>
-            → Futószalag (csoportosítás)
+            → Futószalag
           </Link>
         </div>
       )}

@@ -1,20 +1,20 @@
 import { prisma } from "@/lib/db";
 import { listKeywordsWithCounts } from "@/lib/services/keywords";
+import { getCommonTemplate } from "@/lib/services/settings";
 import KeywordManager, { type KeywordRow } from "./KeywordManager";
-import OfferEditor, { type OfferRow } from "./OfferEditor";
+import CommonOfferEditor from "./CommonOfferEditor";
 import ProfileEditor, { type ProfileRow } from "./ProfileEditor";
 import ReprocessButton from "./ReprocessButton";
 
 export const dynamic = "force-dynamic";
 
-// Beállítások (UX.md v3): a ritka dolgok egy helyen — kulcsszó-terv, ajánlatok, profilom.
-// Fázis 8: az ajánlatok és a profil szerkeszthetők (services/settings.ts).
+// Beállítások (UX.md v3): a ritka dolgok egy helyen — kulcsszó-terv, közös ajánlat, profilom.
+// Fázis 11 (egységes horog): EGY közös törzs mindenkinek (getCommonTemplate).
 
 export default async function SettingsPage() {
-  const [keywords, templates, segments, profile] = await Promise.all([
+  const [keywords, commonTemplate, profile] = await Promise.all([
     listKeywordsWithCounts(),
-    prisma.offerTemplate.findMany({ orderBy: [{ segmentKey: "asc" }, { createdAt: "asc" }] }),
-    prisma.segment.findMany({ orderBy: { key: "asc" }, select: { key: true, name: true } }),
+    getCommonTemplate(),
     prisma.myProfile.findMany({ orderBy: { key: "asc" } }),
   ]);
 
@@ -24,13 +24,6 @@ export default async function SettingsPage() {
     notes: k.notes,
     status: k.status,
     leadCount: k.leadCount,
-  }));
-  const offerRows: OfferRow[] = templates.map((t) => ({
-    id: t.id,
-    segmentKey: t.segmentKey,
-    name: t.name,
-    body: t.body,
-    active: t.active,
   }));
   const profileRows: ProfileRow[] = profile.map((p) => ({
     key: p.key,
@@ -53,10 +46,10 @@ export default async function SettingsPage() {
       <section className="card" style={{ marginTop: 16 }}>
         <h2 style={{ fontSize: 16, marginTop: 0 }}>Közös ajánlat (a levél törzse)</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
-          EGY közös törzs megy mindenkinek, az icebreaker után. Itt szerkeszted. Ha módosítod,
-          a lenti gombbal frissítsd a még nem küldött drafteket.
+          EGY közös törzs megy mindenkinek, az icebreaker után. Ez az, amit itt mentesz. Ha
+          módosítod, a lenti gombbal frissítsd a még nem küldött drafteket.
         </p>
-        <OfferEditor offers={offerRows} segments={segments} />
+        <CommonOfferEditor initialBody={commonTemplate?.body ?? ""} />
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
           <ReprocessButton />
         </div>

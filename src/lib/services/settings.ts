@@ -1,56 +1,58 @@
 import { prisma } from "@/lib/db";
 
-// Admin-logika EGY helyen (CONSTITUTION 8., Fázis 8): ajánlat-sablonok és profil-morzsák
-// szerkesztése. A séma stabil (nincs migráció) — ez tiszta logika a meglévő táblákon.
+// Admin-logika EGY helyen (CONSTITUTION 8.): a KÖZÖS ajánlat-törzs és a profil-morzsák.
+// Fázis 11 (egységes horog): nincs per-szegmens / per-kampány sablon — MINDENKI ugyanazt a
+// közös törzset kapja. A séma stabil (nincs migráció); a `segmentKey` a séma miatt kötelező,
+// de a modellben irreleváns. A tábla marad (rollback-barát), a UI csak egy törzset kezel.
 
-async function assertSegmentExists(segmentKey: string) {
-  const seg = await prisma.segment.findUnique({ where: { key: segmentKey } });
-  if (!seg) throw new Error(`Nincs ilyen szegmens: ${segmentKey}`);
-}
-
-export async function createOfferTemplate(input: {
-  segmentKey: string;
-  name: string;
-  body: string;
-}) {
-  const name = input.name.trim();
-  const body = input.body.trim();
-  if (!name) throw new Error("A sablon neve nem lehet üres.");
-  if (!body) throw new Error("A sablon törzse nem lehet üres.");
-  await assertSegmentExists(input.segmentKey);
-  return prisma.offerTemplate.create({
-    data: { segmentKey: input.segmentKey, name, body, active: true },
+// A KÖZÖS ajánlat-sablon EGY forrás-igazsága: az egyetlen aktív OfferTemplate.
+// Mind a megírás (generateMessage), mind a home-jelző (conveyor) innen olvas.
+export async function getCommonTemplate() {
+  return prisma.offerTemplate.findFirst({
+    where: { active: true },
+    orderBy: { updatedAt: "desc" },
   });
 }
 
-export async function updateOfferTemplate(
-  id: string,
-  patch: { name?: string; body?: string; active?: boolean; segmentKey?: string },
-) {
-  const data: {
-    name?: string;
-    body?: string;
-    active?: boolean;
-    segmentKey?: string;
-  } = {};
+// A közös törzs mentése. Invariáns: PONTOSAN EGY aktív sablon lehet — a mentés ezt
+// tranzakcióban kikényszeríti (a többit deaktiválja), így sose kétséges, mi megy ki.
+export async function saveCommonBody(body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A közös törzs nem lehet üres.");
 
-  if (patch.name !== undefined) {
-    const name = patch.name.trim();
-    if (!name) throw new Error("A sablon neve nem lehet üres.");
-    data.name = name;
-  }
-  if (patch.body !== undefined) {
-    const body = patch.body.trim();
-    if (!body) throw new Error("A sablon törzse nem lehet üres.");
-    data.body = body;
-  }
-  if (patch.active !== undefined) data.active = patch.active;
-  if (patch.segmentKey !== undefined) {
-    await assertSegmentExists(patch.segmentKey);
-    data.segmentKey = patch.segmentKey;
-  }
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.offerTemplate.findFirst({
+      where: { active: true },
+      orderBy: { updatedAt: "desc" },
+    });
 
-  return prisma.offerTemplate.update({ where: { id }, data });
+    if (current) {
+      // Minden más aktívat deaktiválunk → marad az egy élő közös törzs.
+      await tx.offerTemplate.updateMany({
+        where: { active: true, id: { not: current.id } },
+        data: { active: false },
+      });
+      return tx.offerTemplate.update({
+        where: { id: current.id },
+        data: { body: text, active: true },
+      });
+    }
+
+    // Nincs aktív sablon (üres DB / mindet deaktiválták): hozzunk létre egyet.
+    // A segmentKey séma-kötelező, de az egységes horogban irreleváns — az első
+    // elérhető szegmenst kapja technikai értékként.
+    const seg = await tx.segment.findFirst({ orderBy: { key: "asc" } });
+    if (!seg) {
+      throw new Error("Nincs egyetlen szegmens sem — előbb seedeld a szegmenseket.");
+    }
+    await tx.offerTemplate.updateMany({
+      where: { active: true },
+      data: { active: false },
+    });
+    return tx.offerTemplate.create({
+      data: { segmentKey: seg.key, name: "Közös törzs", body: text, active: true },
+    });
+  });
 }
 
 // Profil-morzsa létrehozása/frissítése kulcs szerint (upsert — a `voice` sose tűnhet el).
