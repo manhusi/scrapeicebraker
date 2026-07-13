@@ -205,5 +205,34 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   (volt „(csoportosítás)"), TopNav isActive már nem figyeli a megszűnt `/campaigns`-t. A séma és a régi
   sablonok érintetlenek (rollback-barát); `OfferTemplate.segmentKey` séma-kötelező marad, de a UI nem
   kezeli (üres-DB edge-case: az első szegmenst kapja technikai értékként).
+- **Fázis 12 — ÉLES KAMPÁNY + VSL-SZÁLLÍTÁS (folyamatban, 2026-07).** Az első kampány kiment:
+  **~50 email → 10 válasz → 8 pozitív** (megnéznék a videót). A fókusz átvált: eddig a rendszert
+  (szoftvert) építettük, mostantól **szállítani** kell (VSL + sales + retainer). A teljes VSL-playbook
+  külön forrás-igazságban: `docs/VSL.md` (meleg personalizált audit, NEM cold VSL; 6-beat, 2–2,5 perc;
+  seamless belépő → retainer ascend; 3 szállítási playbook; mi reprodukálható). Üzleti döntések:
+  (1) a cél havi 300–400k **retainer** (2M/hó út), de a VSL a PRÓBÁT adja el, a próba a retainert;
+  (2) fizetés Stripe + számlázz.hu (mint kacatanya.hu), automata kártyás terhelés — de a **legális keret
+  a nulladik blokkoló** (múltbeli bukás oka); (3) VSL-generátor és saját fizetési dashboard PARKOLVA,
+  amíg nincs 3-4 fizető ügyfél. A 6 auditált lead playbook-besorolása és a Stripe/adó-jegyzet a
+  `docs/VSL.md`-ben. Következő gyakorlati lépés: Art Hotel VSL-script (leggyorsabb, „csak kreatív").
+  ⚠️ NYITOTT: a közös email-törzs jelenlegi LEGJOBB verziója (V7) még NINCS beírva a Beállításokba
+  (a `/settings` „Közös ajánlat" mezőjébe kell menteni + „Draftek frissítése"):
+
+  > Amúgy a hirdetésetekbe futottam bele, úgy jutottam el hozzátok.
+  >
+  > (Remélem, nálatok nem így van), de a legtöbbeknél ugyanazt látom: a hirdetés idehozza az
+  > érdeklődőt, aztán a nagyja elszivárog, mielőtt tényleg vevő lenne belőle.
+  >
+  > A Káca Tanyánál pont ezt hoztuk helyre. Ugyanannyi hirdetésből érezhetően többen mentek végig
+  > a fizetésig, plusz munka nélkül.
+  >
+  > Csináltam egy 2 perces videót arról, hogy nálatok hol csúszhat el, és mit lehet vele kezdeni. Átküldhetem?
+  >
+  > Ha nem aktuális, az is oké.
+  >
+  > Üdv, Bálint
+  > Az iPhone-omról küldve
+
+  (Nyitott mikro-döntések a törzsön: „a nagyja elszivárog" él vs. puhább; Káca Tanya néven vs. névtelen; „vevő" mint közös szó.)
 - **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész — most már a globális
   `/api/export` —, a bizonyíték a te manuális lépésed: exportált CSV betöltése egy Instantly-fiókba).
