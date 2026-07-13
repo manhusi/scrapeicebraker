@@ -17,6 +17,7 @@ export async function exportApprovedLeads(): Promise<ExportResult> {
   const leads = await prisma.lead.findMany({
     where: {
       email: { not: null },
+      status: { not: "BANNED" }, // fail-closed: bannolt cég sose kerülhet exportba
       message: { status: { in: ["APPROVED", "EXPORTED"] } },
     },
     include: { message: true },

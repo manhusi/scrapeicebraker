@@ -118,6 +118,10 @@ a {
   background: var(--warn);
 }
 
+.btn-danger {
+  background: var(--danger);
+}
+
 .btn-purple {
   background: var(--purple);
 }

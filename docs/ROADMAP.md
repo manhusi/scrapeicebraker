@@ -234,5 +234,16 @@ Bármelyik lépés hibázhat anélkül, hogy a lead elveszne — a státusz megm
   > Az iPhone-omról küldve
 
   (Nyitott mikro-döntések a törzsön: „a nagyja elszivárog" él vs. puhább; Káca Tanya néven vs. névtelen; „vevő" mint közös szó.)
+- **Fázis 13 — BAN az átnézésnél (kész, 2026-07).** Az átnézésnél a Jóváhagyás/Kihagyás mellé bekerült a
+  **Törlés** (🚫), ami `BANNED` státuszra állítja a leadet. NEM kemény törlés: a sor + a `pageId`/`email`
+  dedupe-kulcs a DB-ben marad, ezért ha ugyanazt a céget később más kulcsszóval újra behúzod, az import
+  „már megvan"-ként átugorja (`skippedAlreadyExists`). A bannolt lead kimarad a review-sorból ÉS az
+  exportból (fail-closed a `status: { not: BANNED }` őrrel is), az üzenete DRAFT-on marad. Kézzel
+  visszavehető (status → DRAFTED). Rétegek: `LeadStatus.BANNED` enum + migráció; `banLead()` +
+  review-sor szűrő (`reviewMessage.ts`); export-őr (`exportLeads.ts`); `action:"ban"`
+  (`/api/messages/[leadId]`); Törlés-gomb + `danger` gomb-variáns (`ReviewPanel.tsx`, `Button.tsx`,
+  `globals.css`); `BANNED` mint kizárt állapot (`pipeline.ts`). A dedup státusz-független volt, ezért nem
+  igényelt változást — 4-állításos scripttel valós adaton igazolva. ⚠️ Migráció után a futó `next dev`-et
+  ÚJRA KELL INDÍTANI (elavult Prisma kliens különben a `/review`-t bedönti).
 - **Következő:** Fázis 7 export-verifikáció valós Instantly-importtal (a kód kész — most már a globális
   `/api/export` —, a bizonyíték a te manuális lépésed: exportált CSV betöltése egy Instantly-fiókba).

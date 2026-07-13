@@ -65,6 +65,24 @@ export default function ReviewPanel(p: Props) {
     if (r.ok) window.location.reload();
   }
 
+  async function ban() {
+    if (
+      !window.confirm(
+        "Biztosan eldobod ezt a vállalkozást? Kimarad az exportból, és ha később újra behúzod, a rendszer már-megvan-ként átugorja. (Kézzel visszavehető.)",
+      )
+    )
+      return;
+    setBusy(true);
+    setMsg(null);
+    const r = await apiCall(`/api/messages/${p.leadId}`, {
+      method: "PATCH",
+      body: { action: "ban" },
+    });
+    setBusy(false);
+    if (!r.ok) return setMsg(`Hiba: ${r.error}`);
+    goNext();
+  }
+
   async function regenerate() {
     setBusy(true);
     setMsg("Újraírás folyamatban…");
@@ -114,6 +132,9 @@ export default function ReviewPanel(p: Props) {
             </Button>
             <Button variant="ghost" onClick={regenerate} disabled={busy}>
               ↻ Újraírás
+            </Button>
+            <Button variant="danger" onClick={ban} disabled={busy}>
+              🚫 Törlés
             </Button>
           </>
         )}

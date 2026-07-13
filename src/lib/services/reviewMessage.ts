@@ -3,10 +3,10 @@ import { prisma } from "@/lib/db";
 // Draft-review logika: szerkesztés + jóváhagyás. A jóváhagyás lép a lead-állapotgépen (DRAFTED→APPROVED).
 
 // A review-sor forrás-igazsága (UX v4): MINDEN üzenetes lead createdAt szerint, globálisan.
-// Nincs kampány — egy közös sor, prev/next az egészen.
+// Nincs kampány — egy közös sor, prev/next az egészen. A BANNED (kézzel eldobott) leadek kimaradnak.
 export async function getReviewQueue() {
   const leads = await prisma.lead.findMany({
-    where: { message: { isNot: null } },
+    where: { message: { isNot: null }, status: { not: "BANNED" } },
     orderBy: { createdAt: "asc" },
     include: { message: true, analysis: true },
   });
@@ -38,6 +38,15 @@ export async function approveMessage(leadId: string) {
   return prisma.lead.update({
     where: { id: leadId },
     data: { status: "APPROVED" },
+  });
+}
+
+// Kézi eldobás („Törlés" gomb): a vállalkozás bannolása. A sor MARAD (dedup „már megvan"),
+// az üzenet DRAFT-on marad (sose kap APPROVED-ot → sose exportálódik). Kézzel visszavehető.
+export async function banLead(leadId: string) {
+  return prisma.lead.update({
+    where: { id: leadId },
+    data: { status: "BANNED" },
   });
 }
 

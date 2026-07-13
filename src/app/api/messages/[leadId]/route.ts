@@ -3,10 +3,11 @@ import {
   updateMessage,
   approveMessage,
   unapproveMessage,
+  banLead,
 } from "@/lib/services/reviewMessage";
 
-// PATCH /api/messages/[leadId] — szerkesztés vagy jóváhagyás.
-// body: { action: "save"|"approve"|"unapprove", subject?, finalMessage? }
+// PATCH /api/messages/[leadId] — szerkesztés, jóváhagyás vagy kézi eldobás (ban).
+// body: { action: "save"|"approve"|"unapprove"|"ban", subject?, finalMessage? }
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ leadId: string }> },
@@ -34,6 +35,9 @@ export async function PATCH(
         break;
       case "unapprove":
         await unapproveMessage(leadId);
+        break;
+      case "ban":
+        await banLead(leadId);
         break;
       default:
         return NextResponse.json(

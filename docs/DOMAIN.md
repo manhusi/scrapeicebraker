@@ -21,10 +21,16 @@ igazítva (lásd a mapping táblát lent).
 - `followers` — követők (CSV: `followers`) → méret-jel
 - `phone`, `address` — kontextus (CSV: `phone`, `address`)
 - `sourceKeyword` — melyik kulcsszóra jött (kézzel megadva importkor, a CSV nem tartalmazza)
-- `status` — enum: IMPORTED, SCRAPED, SCRAPE_FAILED, ANALYZED, ANALYZE_FAILED, **DISQUALIFIED**, DRAFTED, APPROVED, EXPORTED
+- `status` — enum: IMPORTED, SCRAPED, SCRAPE_FAILED, ANALYZED, ANALYZE_FAILED, **DISQUALIFIED**, DRAFTED, APPROVED, EXPORTED, **BANNED**
   - `DISQUALIFIED` (Fázis 9): elemezve, de NEM célpont — a foglalás-fájdalom szegmenseknél már
     online foglal (`Analysis.bookingMode = "online"`), ezért nem kap üzenetet. Nem vész el, látható
     a „Nem célpont" szűrőben, kézzel visszavehető. Lásd `docs/ICEBREAKER.md` (kvalifikáció).
+  - `BANNED` (Fázis 13): átnézésnél kézzel eldobott vállalkozás (a „Törlés" gomb). NEM kemény törlés —
+    a lead sora és a `pageId`/`email` dedupe-kulcs a DB-ben marad, ezért ha ugyanezt a céget később
+    (más kulcsszóval, pl. hirdetéskezelővel) újra behúznád, az import „már megvan"-ként átugorja
+    (`skippedAlreadyExists`). A bannolt lead kimarad a review-sorból ÉS az exportból (fail-closed).
+    A `Message` érintetlen marad DRAFT-on (sose kap APPROVED-ot, így exportba se kerülhet). Kézzel
+    visszavehető (status → DRAFTED). A dedup státusz-független, ezért nem igényel külön logikát.
 - `importBatchId` — melyik importból jött
 - `campaignId` — melyik kampányba szervezve (N—1, opcionális). A generálás/review/export kampány-szintű.
 - `createdAt`, `updatedAt`

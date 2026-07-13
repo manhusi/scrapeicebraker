@@ -16,6 +16,7 @@ export const STATUS_META: Record<LeadStatus, StatusMeta> = {
   DRAFTED: { label: "Átnézésre vár", color: "#d29922" },
   APPROVED: { label: "Jóváhagyva", color: "#8957e5" },
   EXPORTED: { label: "Exportálva", color: "#2ea043" },
+  BANNED: { label: "Eldobva", color: "#6e7681" },
 };
 
 // A boldog út lépései sorrendben (a stepper ezt mutatja).
@@ -31,8 +32,8 @@ export const MAIN_FLOW: LeadStatus[] = [
 // Mellék-állapotok (hibák) — külön, figyelmeztető jelöléssel.
 export const FAILED_STATES: LeadStatus[] = ["SCRAPE_FAILED", "ANALYZE_FAILED"];
 
-// Kizárt: elemezve, de nem célpont (pl. már online foglal) — se nem boldog-út, se nem hiba.
-export const EXCLUDED_STATES: LeadStatus[] = ["DISQUALIFIED"];
+// Kizárt: nem boldog-út, se nem hiba. DISQUALIFIED (már online foglal) vagy BANNED (kézzel eldobva).
+export const EXCLUDED_STATES: LeadStatus[] = ["DISQUALIFIED", "BANNED"];
 
 export const ALL_STATUSES: LeadStatus[] = [
   ...MAIN_FLOW,
